@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main, v1]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run check
+      # starlight-links-validator fails the build on a broken internal link.
+      - run: npm run build

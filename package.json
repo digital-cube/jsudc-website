@@ -1,0 +1,32 @@
+{
+  "name": "jsudc-website",
+  "private": true,
+  "type": "module",
+  "description": "jsudc.dev: the website of the jsudc libraries (@jsudc/core, @jsudc/server, @jsudc/react)",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "shots": "node scripts/shots.mjs"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.7",
+    "@fontsource-variable/inter": "^5.3.0",
+    "astro": "^7.4.4",
+    "sharp": "^0.35.5",
+    "starlight-links-validator": "^0.27.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@biomejs/biome": "^2.6.4",
+    "playwright": "^1.64.1",
+    "typescript": "^5.9.3"
+  }
+}
