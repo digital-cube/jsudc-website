@@ -1,0 +1,310 @@
+<!doctype html>
+<!--
+  The home page mockup shown for review before the site's home is built.
+  Static HTML over the site's own tokens (src/styles/theme.css values) and the
+  real renderer screenshots (src/assets/renderers, from scripts/shots.mjs).
+  Render: open in a browser, or `node design/render-mockup.mjs`.
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>jsudc — home mockup</title>
+<style>
+@font-face {
+  font-family: "Inter Variable";
+  src: url("../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+}
+:root {
+  --paper: oklch(0.985 0.002 260);
+  --surface: oklch(1 0 0);
+  --ink: oklch(0.21 0.02 265);
+  --ink-2: oklch(0.36 0.02 263);
+  --muted: oklch(0.52 0.02 262);
+  --hair: oklch(0.915 0.006 260);
+  --hair-strong: oklch(0.86 0.01 260);
+  --indigo: oklch(0.52 0.2 268);
+  --indigo-low: oklch(0.95 0.025 268);
+  --on-indigo: oklch(0.99 0 0);
+  --code-bg: oklch(0.975 0.004 260);
+  --k: oklch(0.5 0.2 268);
+  --s: oklch(0.47 0.13 155);
+  --n: oklch(0.55 0.16 40);
+  --c: oklch(0.6 0.015 262);
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+[data-theme="dark"] {
+  --paper: oklch(0.16 0.012 265);
+  --surface: oklch(0.195 0.013 265);
+  --ink: oklch(0.96 0.006 260);
+  --ink-2: oklch(0.84 0.012 260);
+  --muted: oklch(0.68 0.02 262);
+  --hair: oklch(0.285 0.016 265);
+  --hair-strong: oklch(0.34 0.018 265);
+  --indigo: oklch(0.66 0.17 268);
+  --indigo-low: oklch(0.26 0.05 268);
+  --on-indigo: oklch(0.16 0.02 265);
+  --code-bg: oklch(0.185 0.013 265);
+  --k: oklch(0.76 0.13 268);
+  --s: oklch(0.76 0.13 155);
+  --n: oklch(0.78 0.12 50);
+  --c: oklch(0.58 0.015 262);
+}
+* { box-sizing: border-box; margin: 0; }
+body {
+  background: var(--paper); color: var(--ink);
+  font: 400 16px/1.6 "Inter Variable", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+a { color: inherit; text-decoration: none; }
+code, pre { font-family: var(--mono); }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 40px; }
+
+/* header: what Starlight's header becomes */
+header { border-bottom: 1px solid var(--hair); background: var(--paper); }
+header .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 18px; letter-spacing: -0.01em; }
+.brand svg { width: 28px; height: 28px; }
+.search { flex: 0 1 300px; margin-left: 12px; height: 36px; border: 1px solid var(--hair-strong); border-radius: 8px; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--muted); font-size: 14px; }
+.search kbd { margin-left: auto; font: 500 12px var(--mono); border: 1px solid var(--hair-strong); border-radius: 4px; padding: 1px 5px; }
+nav.top { display: flex; gap: 24px; margin-left: auto; font-size: 15px; color: var(--ink-2); }
+.icons { display: flex; gap: 14px; color: var(--ink-2); }
+.icons svg { width: 20px; height: 20px; }
+
+/* hero */
+.hero { padding: 88px 0 48px; display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: end; }
+h1 {
+  font-size: 68px; line-height: 1.02; letter-spacing: -0.04em; font-weight: 680;
+  max-width: 15ch; text-wrap: balance;
+}
+.lede { margin-top: 24px; max-width: 62ch; font-size: 19px; line-height: 1.55; color: var(--ink-2); }
+.lede code { font-size: 0.86em; color: var(--ink); background: var(--indigo-low); padding: 1px 5px; border-radius: 4px; }
+.cta { display: flex; flex-direction: column; gap: 10px; min-width: 240px; }
+.btn { display: flex; justify-content: center; align-items: center; height: 46px; padding: 0 22px; border-radius: 10px; font-weight: 600; font-size: 15px; }
+.btn.primary { background: var(--indigo); color: var(--on-indigo); }
+.btn.ghost { border: 1px solid var(--hair-strong); color: var(--ink); }
+.install { font: 13px var(--mono); color: var(--muted); text-align: center; margin-top: 4px; }
+
+/* the collection: three files of one directory, one frame */
+.collection { border: 1px solid var(--hair-strong); border-radius: 14px; overflow: hidden; background: var(--code-bg); }
+.collection .path { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid var(--hair); font: 13px var(--mono); color: var(--muted); background: var(--surface); }
+.collection .path b { color: var(--ink); font-weight: 600; }
+.files { display: grid; grid-template-columns: 1fr 1.25fr 1fr; }
+.file + .file { border-left: 1px solid var(--hair); }
+.file h3 { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 18px 0; font: 600 13px var(--mono); color: var(--ink); }
+.file h3 span { font: 400 13px "Inter Variable", sans-serif; color: var(--muted); }
+.file pre { padding: 12px 18px 18px; font-size: 12.5px; line-height: 1.65; color: var(--ink-2); overflow: hidden; }
+.k { color: var(--k); } .s { color: var(--s); } .n { color: var(--n); } .c { color: var(--c); }
+.hl { display: inline-block; width: calc(100% + 36px); margin: 0 -18px; padding: 0 18px; background: var(--indigo-low); box-shadow: inset 3px 0 0 var(--indigo); }
+
+/* the strip: the bold element */
+.strip-head { display: flex; justify-content: space-between; align-items: baseline; margin: 72px 0 20px; }
+h2 { font-size: 34px; line-height: 1.15; letter-spacing: -0.025em; font-weight: 650; max-width: 24ch; }
+.strip-head p { color: var(--muted); font-size: 15px; max-width: 46ch; }
+.strip { display: flex; gap: 20px; overflow: hidden; padding: 0 0 8px calc((100vw - 1240px) / 2 + 40px); }
+.frame { flex: 0 0 640px; }
+.frame .shot { border: 1px solid var(--hair-strong); border-radius: 12px; overflow: hidden; aspect-ratio: 16 / 11; background: var(--surface); }
+.frame img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.frame figcaption { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 14px; }
+.frame figcaption b { font-weight: 600; }
+.frame figcaption code { font-size: 12.5px; color: var(--muted); }
+.frame figcaption code em { font-style: normal; color: var(--k); }
+.names { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 20px; padding: 4px; border: 1px solid var(--hair); border-radius: 10px; width: fit-content; background: var(--surface); }
+.names span { padding: 6px 12px; border-radius: 7px; font-size: 14px; font-weight: 550; color: var(--muted); }
+.names span.on { background: var(--indigo-low); color: var(--ink); }
+
+/* protocol */
+section.protocol { margin-top: 112px; display: grid; grid-template-columns: 5fr 7fr; gap: 64px; }
+.protocol p { margin-top: 16px; color: var(--ink-2); max-width: 46ch; }
+.protocol p code { font-size: 0.86em; }
+.wire { border: 1px solid var(--hair-strong); border-radius: 14px; overflow: hidden; }
+.wire .side { display: grid; grid-template-columns: 150px 1fr; border-bottom: 1px solid var(--hair); }
+.wire .side:last-child { border-bottom: 0; }
+.wire .who { padding: 18px; border-right: 1px solid var(--hair); font-size: 14px; }
+.wire .who b { display: block; font: 600 13px var(--mono); }
+.wire .who span { color: var(--muted); font-size: 13px; }
+.wire pre { padding: 18px; font-size: 12.5px; line-height: 1.6; background: var(--code-bg); color: var(--ink-2); white-space: pre-wrap; }
+.wire .core { padding: 12px 18px; background: var(--indigo-low); font-size: 13.5px; color: var(--ink-2); }
+.wire .core b { font: 600 13px var(--mono); color: var(--ink); }
+
+/* quick starts */
+section.start { margin-top: 112px; }
+.tabs { display: flex; gap: 4px; margin-top: 24px; border-bottom: 1px solid var(--hair); }
+.tabs span { padding: 10px 16px; font-weight: 550; font-size: 15px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs span.on { color: var(--ink); border-color: var(--indigo); }
+.start-body { display: grid; grid-template-columns: 7fr 5fr; gap: 48px; margin-top: 24px; }
+.code { border: 1px solid var(--hair-strong); border-radius: 12px; background: var(--code-bg); }
+.code .bar { padding: 9px 16px; border-bottom: 1px solid var(--hair); font: 12.5px var(--mono); color: var(--muted); }
+.code pre { padding: 16px; font-size: 13px; line-height: 1.7; color: var(--ink-2); }
+.start-body ol { padding-left: 20px; color: var(--ink-2); }
+.start-body li + li { margin-top: 14px; }
+.start-body li code { font-size: 0.86em; background: var(--indigo-low); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
+a.more { display: inline-block; margin-top: 24px; color: var(--indigo); font-weight: 600; }
+
+/* packages */
+section.pkgs { margin-top: 112px; }
+.pkg { display: grid; grid-template-columns: 220px 1fr auto; gap: 32px; align-items: center; padding: 22px 0; border-top: 1px solid var(--hair); }
+.pkg:last-child { border-bottom: 1px solid var(--hair); }
+.pkg b { font: 600 16px var(--mono); }
+.pkg p { color: var(--ink-2); font-size: 15px; }
+.badge { display: inline-flex; font: 600 12px/1 var(--mono); border-radius: 5px; overflow: hidden; }
+.badge span { padding: 6px 8px; background: oklch(0.38 0.02 262); color: white; }
+.badge span + span { background: oklch(0.5 0.17 155); }
+
+footer { margin-top: 112px; border-top: 1px solid var(--hair); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="#"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="oklch(0.52 0.2 268)"/><rect x="8" y="8.5" width="16" height="3.5" rx="1.75" fill="#fff"/><rect x="8" y="14.25" width="11" height="3.5" rx="1.75" fill="#fff" opacity=".8"/><rect x="8" y="20" width="13.5" height="3.5" rx="1.75" fill="#fff" opacity=".6"/></svg>jsudc</a>
+    <div class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search the docs<kbd>Ctrl K</kbd></div>
+    <nav class="top"><a>Get started</a><a>Concepts</a><a>Reference</a><a>Examples</a><a>Packages</a></nav>
+    <div class="icons">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.2.8.8 1.3 1.9 1.3 3.1 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5Z"/></svg>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <h1>Describe a collection. Get the whole data UI.</h1>
+        <p class="lede">A collection is three small files: its fields in <code>schema.json</code>, how it looks in <code>view.yaml</code>, where its rows live in <code>source.yaml</code>. The server answers for it over one JSON protocol, and the React data view draws it with search, filters, inline edits and a schema editor.</p>
+      </div>
+      <div class="cta">
+        <a class="btn primary">Get started</a>
+        <a class="btn ghost">Open the live example</a>
+        <div class="install">npm install @jsudc/react</div>
+      </div>
+    </section>
+
+    <div class="collection">
+      <div class="path"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>collections/<b>repos</b>/<span style="margin-left:auto;font-family:'Inter Variable',sans-serif">The public GitHub repositories of digital-cube, a collection of the live example</span></div>
+      <div class="files">
+        <div class="file">
+          <h3>schema.json <span>the fields</span></h3>
+<pre>{
+  <span class="k">"fields"</span>: {
+    <span class="k">"name"</span>: { <span class="k">"type"</span>: <span class="s">"string"</span> },
+    <span class="k">"description"</span>: { <span class="k">"type"</span>: <span class="s">"text"</span> },
+    <span class="k">"language"</span>: { <span class="k">"type"</span>: <span class="s">"string"</span> },
+    <span class="k">"stargazers_count"</span>: {
+      <span class="k">"type"</span>: <span class="s">"integer"</span>, <span class="k">"min"</span>: <span class="n">0</span> },
+    <span class="k">"pushed_at"</span>: { <span class="k">"type"</span>: <span class="s">"datetime"</span> },
+    <span class="k">"topics"</span>: { <span class="k">"type"</span>: <span class="s">"string_array"</span> },
+    <span class="k">"archived"</span>: { <span class="k">"type"</span>: <span class="s">"bool"</span> }
+  }
+}</pre>
+        </div>
+        <div class="file">
+          <h3>view.yaml <span>how it is shown</span></h3>
+<pre><span class="k">default_renderer</span>: cards
+<span class="hl"><span class="k">available_renderers</span>: [cards, table, chart]</span>
+<span class="k">search</span>:
+  <span class="k">fields</span>: [name, description]
+<span class="k">filters</span>:
+  - { <span class="k">field</span>: language, <span class="k">kind</span>: select }
+  - { <span class="k">field</span>: archived, <span class="k">kind</span>: bool }
+<span class="k">columns</span>:
+  - { <span class="k">field</span>: name, <span class="k">pin</span>: left, <span class="k">width</span>: <span class="n">220</span> }
+  - { <span class="k">field</span>: language, <span class="k">render</span>: badge }
+<span class="k">chart_options</span>: { <span class="k">type</span>: pie,
+  <span class="k">category_field</span>: name, <span class="k">value_field</span>: stargazers_count }</pre>
+        </div>
+        <div class="file">
+          <h3>source.yaml <span>where rows live</span></h3>
+<pre><span class="k">kind</span>: http_api
+<span class="k">options</span>:
+  <span class="k">base_url</span>: https://api.github.com
+  <span class="k">list_endpoint</span>: /users/digital-cube/repos
+  <span class="k">id_field</span>: name
+  <span class="k">field_map</span>:
+    <span class="k">owner_avatar</span>: owner.avatar_url
+  <span class="k">cache_ttl_ms</span>: <span class="n">300000</span>
+
+<span class="c"># or postgres_jsonb, memory,</span>
+<span class="c"># filesystem, yaml_menu; with no</span>
+<span class="c"># source.yaml, a Postgres table</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="strip-head">
+      <h2>Seven renderers and a schema editor, from one line of YAML</h2>
+      <p>Real screenshots of the live example. Each view lists the renderers it offers; the data view draws one tab per name.</p>
+    </div>
+    <div class="names"><span>Table</span><span>Cards</span><span class="on">Kanban</span><span>Calendar</span><span>Tree</span><span>Map</span><span>Chart</span><span>Schema editor</span></div>
+  </div>
+
+  <div class="strip">
+    <figure class="frame"><div class="shot"><img src="../src/assets/renderers/kanban-light.webp" alt="" /></div><figcaption><b>Kanban</b><code>tickets/view.yaml</code></figcaption></figure>
+    <figure class="frame"><div class="shot"><img src="../src/assets/renderers/calendar-light.webp" alt="" /></div><figcaption><b>Calendar</b><code>appointments/view.yaml</code></figcaption></figure>
+    <figure class="frame"><div class="shot"><img src="../src/assets/renderers/map-light.webp" alt="" /></div><figcaption><b>Map</b><code>flights/view.yaml</code></figcaption></figure>
+    <figure class="frame"><div class="shot"><img src="../src/assets/renderers/table-light.webp" alt="" /></div><figcaption><b>Table</b><code>companies/view.yaml</code></figcaption></figure>
+  </div>
+  <div class="wrap">
+
+    <section class="protocol">
+      <div>
+        <h2>One protocol, both sides</h2>
+        <p><code>@jsudc/core</code> is the contract: every request and every answer is a Zod-validated envelope. The server imports it to check what arrives; the client imports it to check what comes back. Swap either side for your own and the other does not notice.</p>
+        <p>Every action is <code>POST /udc/&lt;action&gt;</code>: <code>describe</code>, <code>list</code>, <code>read</code>, <code>mutate</code>, and schema edits that add, change or retire a field at runtime.</p>
+      </div>
+      <div class="wire">
+        <div class="side"><div class="who"><b>@jsudc/react</b><span>asks</span></div>
+<pre>POST /udc/list
+{ <span class="k">"collection"</span>: <span class="s">"repos"</span>,
+  <span class="k">"filter"</span>: { <span class="k">"field"</span>: <span class="s">"language"</span>, <span class="k">"op"</span>: <span class="s">"eq"</span>, <span class="k">"value"</span>: <span class="s">"TypeScript"</span> },
+  <span class="k">"sort"</span>: [{ <span class="k">"field"</span>: <span class="s">"stargazers_count"</span>, <span class="k">"dir"</span>: <span class="s">"desc"</span> }],
+  <span class="k">"page"</span>: { <span class="k">"limit"</span>: <span class="n">60</span> } }</pre></div>
+        <div class="core"><b>@jsudc/core</b> validates both directions with the same schemas</div>
+        <div class="side"><div class="who"><b>@jsudc/server</b><span>answers</span></div>
+<pre>{ <span class="k">"kind"</span>: <span class="s">"udc.list.ok"</span>,
+  <span class="k">"payload"</span>: { <span class="k">"rows"</span>: [ … ], <span class="k">"next_cursor"</span>: <span class="s">"eyJvIjo2MH0"</span>, <span class="k">"total"</span>: <span class="n">45</span> } }</pre></div>
+      </div>
+    </section>
+
+    <section class="start">
+      <h2>Start where you are</h2>
+      <div class="tabs"><span class="on">A server</span><span>A React data view</span><span>Both, with Postgres</span></div>
+      <div class="start-body">
+        <div class="code">
+          <div class="bar">server.ts</div>
+<pre><span class="k">import</span> Fastify <span class="k">from</span> <span class="s">"fastify"</span>;
+<span class="k">import</span> { createDispatcher, loadRegistry, makeSource, udcPlugin } <span class="k">from</span> <span class="s">"@jsudc/server"</span>;
+
+<span class="k">const</span> registry = loadRegistry(<span class="s">"./collections"</span>, (asset, reg) =&gt;
+  makeSource(asset, { registry: reg, env: process.env }),
+);
+<span class="k">const</span> app = Fastify();
+<span class="k">await</span> app.register(udcPlugin, { dispatcher: createDispatcher(registry), registry });
+<span class="k">await</span> app.listen({ port: <span class="n">5100</span> });</pre>
+        </div>
+        <ol>
+          <li><code>npm install @jsudc/server @jsudc/core fastify zod</code></li>
+          <li>Put a <code>books/</code> directory under <code>collections/</code> with a <code>view.yaml</code>, a <code>schema.json</code> and a <code>source.yaml</code> of <code>kind: memory</code>.</li>
+          <li>Run it, then ask it: <code>curl localhost:5100/udc/list -d '{"collection":"books"}'</code></li>
+        </ol>
+      </div>
+      <a class="more">The three quick starts in full, on Get started</a>
+    </section>
+
+    <section class="pkgs">
+      <h2>Three packages, one version line</h2>
+      <div style="margin-top: 24px">
+        <div class="pkg"><b>@jsudc/core</b><p>The protocol: envelopes, the filter language and its evaluator, the schema, view and source types, row validation, and the transport client.</p><span class="badge"><span>npm</span><span>v0.1.1</span></span></div>
+        <div class="pkg"><b>@jsudc/server</b><p>Dispatcher, registry, five sources, the schema store and its revisions, seeding, and a Fastify plugin with the OpenAPI of every action.</p><span class="badge"><span>npm</span><span>v0.1.1</span></span></div>
+        <div class="pkg"><b>@jsudc/react</b><p>The data view, seven renderers, the schema editor, hooks over TanStack Query, a headless layer, and a stylesheet you restyle with CSS variables.</p><span class="badge"><span>npm</span><span>v0.1.1</span></span></div>
+      </div>
+    </section>
+  </div>
+</main>
+<footer><div class="wrap"><span>MIT licence, © 2026 DigitalCube</span><span>jsudc.dev</span></div></footer>
+</body>
+</html>
