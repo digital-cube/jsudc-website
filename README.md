@@ -70,6 +70,27 @@ The build reads two variables (`src/site.mjs`): `SITE_URL`, the site's own origi
 points (default `https://examples.jsudc.dev`; `deploy/stage.sh` passes
 `https://examples.stage.jsudc.dev`).
 
+## Deploy: production
+
+<https://jsudc.dev> (and `www.jsudc.dev`, a 301 to it) is static files served by
+nginx on `digitalcube-production-websites` (hetzner2), next to the production
+example; TLS ends at the edge in front of it. On that VM, as `digital`:
+
+```sh
+deploy/prod.sh --install   # once: links deploy/nginx/jsudc.dev.conf over the "coming soon" vhost, reloads nginx, deploys
+deploy/prod.sh             # every deploy: builds origin/main (origin/v1 until main exists) and swaps it in
+deploy/prod.sh --ref <sha> # a rollback or a pinned build
+```
+
+The same build-and-swap as stage, in `/home/digital/sites/jsudc.dev`, with
+`SITE_URL=https://jsudc.dev` and `EXAMPLE_URL=https://examples.jsudc.dev`. It
+refuses another host, another user and root, and fails unless the built home page
+(its canonical URL and the example links), the 404, the `www` redirect and
+`https://jsudc.dev/` through the edge all answer. `deploy/prod.sh --help` has the
+options. The first run can be a copy: `scp deploy/prod.sh
+digitalcube-production-websites:/tmp/ && ssh digitalcube-production-websites
+/tmp/prod.sh --install`.
+
 ## Licence
 
 MIT, see [LICENSE](LICENSE).
