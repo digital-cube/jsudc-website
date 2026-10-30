@@ -1,0 +1,45 @@
+# Deploys dist/ to GitHub Pages on every push to main, once the host is chosen:
+# repository variable DEPLOY_TARGET=github-pages and Settings → Pages → Source
+# "GitHub Actions" (the repository public, or a plan with private Pages), custom
+# domain jsudc.dev set there. Without the variable the job is skipped. See DEPLOY.md.
+name: Deploy (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: vars.DEPLOY_TARGET == 'github-pages'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

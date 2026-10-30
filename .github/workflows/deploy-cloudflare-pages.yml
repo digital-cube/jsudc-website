@@ -1,0 +1,35 @@
+# Deploys dist/ to Cloudflare Pages on every push to main, once the host is chosen:
+# repository variable DEPLOY_TARGET=cloudflare-pages, secrets CLOUDFLARE_API_TOKEN
+# (Pages: Edit) and CLOUDFLARE_ACCOUNT_ID, a Pages project named jsudc-website.
+# Without the variable the job is skipped. See DEPLOY.md.
+name: Deploy (Cloudflare Pages)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cloudflare-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: vars.DEPLOY_TARGET == 'cloudflare-pages'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=jsudc-website --branch=main

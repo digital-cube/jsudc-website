@@ -25,9 +25,9 @@ const files = [
     {
       files.map((f) => (
         <section class="file" aria-label={f.name}>
-          <h3>
+          <p class="fname">
             {f.name} <span>{f.role}</span>
-          </h3>
+          </p>
           <Code code={f.code.trimEnd()} lang={f.lang} frame="none" mark={f.mark} wrap />
         </section>
       ))
@@ -67,7 +67,7 @@ const files = [
   .file + .file {
     border-top: 1px solid var(--jsudc-border);
   }
-  h3 {
+  .fname {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
@@ -75,7 +75,7 @@ const files = [
     font: 600 0.8125rem var(--sl-font-mono);
     color: var(--sl-color-white);
   }
-  h3 span {
+  .fname span {
     font: 400 0.8125rem var(--sl-font);
     color: var(--sl-color-gray-3);
   }

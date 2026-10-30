@@ -19,6 +19,8 @@ export default defineConfig({
       },
       expressiveCode: {
         themes: ["github-dark-default", "github-light-default"],
+        // wrapped lines keep their indentation; no code block scrolls sideways
+        defaultProps: { wrap: true, preserveIndent: true },
         styleOverrides: {
           borderRadius: "12px",
           borderColor: "var(--jsudc-border-strong)",
