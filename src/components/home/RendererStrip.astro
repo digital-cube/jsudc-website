@@ -6,6 +6,7 @@
  * scroll the strip instead of the page.
  */
 import { Image } from "astro:assets";
+import { EXAMPLE_URL } from "../../site.mjs";
 
 const shots = import.meta.glob<{ default: ImageMetadata }>("../../assets/renderers/*.webp", {
   eager: true,
@@ -32,7 +33,7 @@ const frames = [
   <div class="head">
     <h2 id="renderers">Seven renderers and a schema editor, from one line of YAML</h2>
     <p>
-      Real screenshots of the <a href="https://jsudc.igor.digitalcube.work">live example</a>. Each
+      Real screenshots of the <a href={EXAMPLE_URL}>live example</a>. Each
       view lists the renderers it offers in <code>available_renderers</code>; the data view draws one
       tab per name.
     </p>

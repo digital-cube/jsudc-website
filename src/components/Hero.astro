@@ -3,8 +3,11 @@
  * The splash hero (Starlight's `Hero` overridden): the headline and lede on the
  * left, the two actions and the install line on the right. Every value comes
  * from the page's `hero` frontmatter; `install` is an extra action-less line.
+ * A link of `{EXAMPLE_URL}` opens the live example (src/site.mjs), which
+ * frontmatter cannot import.
  */
 import { LinkButton } from "@astrojs/starlight/components";
+import { EXAMPLE_URL } from "../site.mjs";
 
 const { data } = Astro.locals.starlightRoute.entry;
 const { title = data.title, tagline, actions = [] } = data.hero || {};
@@ -19,7 +22,7 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
     actions.length > 0 && (
       <div class="actions">
         {actions.map(({ link, text, variant }) => (
-          <LinkButton href={link} variant={variant === "minimal" ? "secondary" : variant}>
+          <LinkButton href={link.replace("{EXAMPLE_URL}", EXAMPLE_URL)} variant={variant === "minimal" ? "secondary" : variant}>
             {text}
           </LinkButton>
         ))}
