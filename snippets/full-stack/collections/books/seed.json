@@ -1,0 +1,23 @@
+[
+  {
+    "title": "The Master and Margarita",
+    "author": "Mikhail Bulgakov",
+    "year": 1967,
+    "pages": 384,
+    "read": true
+  },
+  {
+    "title": "The Bridge on the Drina",
+    "author": "Ivo Andrić",
+    "year": 1945,
+    "pages": 314,
+    "read": true
+  },
+  {
+    "title": "Dictionary of the Khazars",
+    "author": "Milorad Pavić",
+    "year": 1984,
+    "pages": 338,
+    "read": false
+  }
+]

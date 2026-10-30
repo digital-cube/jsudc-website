@@ -10,8 +10,10 @@
  *   2. a scratch project in .snippets/ installs @jsudc/* the way a reader would,
  *      with the peers the quick starts name, and `tsc --noEmit` compiles every
  *      snippet against them;
- *   3. the server quick start is started for real on a free port and answers a
- *      `list` of the books collection with `udc.list.ok`.
+ *   3. the home page's abridged collection (src/home/repos) passes @jsudc/core's schemas;
+ *   4. the server quick start is started for real on a free port and answers a
+ *      `list` of the books collection with `udc.list.ok`; with SNIPPETS_DATABASE_URL
+ *      (a scratch database) the full-stack seed.ts and server.ts run against Postgres too.
  *
  * SNIPPETS_FROM  npm    the published packages (default)
  *                local  `npm pack` of the sibling checkouts ../jsudc-{core,server,react}
@@ -61,6 +63,8 @@ const PEERS = {
   "@types/node": "^24",
   "@types/react": "^19",
   "@types/react-dom": "^19",
+  // check-snippets' own: parses the YAML it validates
+  yaml: "^2",
 };
 
 const failures = [];
@@ -165,7 +169,29 @@ const tsc = spawnSync(join(WORK, "node_modules", ".bin", "tsc"), ["-p", WORK], {
 });
 if (tsc.status !== 0) failures.push("tsc --noEmit failed (above)");
 
-// --- 3. run the server quick start ------------------------------------------------------
+// --- 3. the home page's collection files are valid documents ---------------------------
+// src/home/repos is an abridged copy of the live example's repos collection.
+const validate = spawnSync(
+  process.execPath,
+  [
+    "--input-type=module",
+    "-e",
+    `import { readFileSync } from "node:fs";
+     import { SchemaDocSchema, SourceConfigSchema, ViewConfigSchema } from "@jsudc/core";
+     import { parse } from "yaml";
+     const dir = process.argv[1];
+     const read = (f) => readFileSync(dir + "/" + f, "utf8");
+     SchemaDocSchema.parse(JSON.parse(read("schema.json")));
+     ViewConfigSchema.parse(parse(read("view.yaml")));
+     SourceConfigSchema.parse(parse(read("source.yaml")));`,
+    join(ROOT, "src", "home", "repos"),
+  ],
+  { cwd: WORK, encoding: "utf8" },
+);
+if (validate.status === 0) console.log("src/home/repos: schema.json, view.yaml, source.yaml valid");
+else failures.push(`src/home/repos is not a valid collection:\n${validate.stderr}`);
+
+// --- 4. run the quick starts --------------------------------------------------------------
 const freePort = () =>
   new Promise((resolve) => {
     const s = createServer().listen(0, () => {
@@ -174,13 +200,14 @@ const freePort = () =>
     });
   });
 
-if (tsc.status === 0) {
+/** Start `<dir>/server.ts` on a free port and expect the three books from a `list`. */
+async function serveBooks(name, dir, env = {}) {
   const port = await freePort();
-  const dir = join(SRC, "server");
   const server = join(dir, "server.ts");
   writeFileSync(server, readFileSync(server, "utf8").replace("port: 5100", `port: ${port}`));
   const child = spawn(process.execPath, [server], {
     cwd: dir,
+    env: { ...process.env, ...env },
     stdio: ["ignore", "ignore", "pipe"],
   });
   let stderr = "";
@@ -200,12 +227,32 @@ if (tsc.status === 0) {
         .catch(() => undefined);
     }
     if (answer?.kind === "udc.list.ok" && answer.payload.rows.length === 3) {
-      console.log(`server quick start: udc.list.ok, ${answer.payload.rows.length} books`);
+      console.log(`${name}: udc.list.ok, ${answer.payload.rows.length} books`);
     } else {
-      failures.push(`server quick start: ${JSON.stringify(answer)}\n${stderr}`);
+      failures.push(`${name}: ${JSON.stringify(answer)}\n${stderr}`);
     }
   } finally {
     child.kill();
+  }
+}
+
+if (tsc.status === 0) {
+  await serveBooks("server quick start", join(SRC, "server"));
+  // The Postgres one needs a database it may write to: SNIPPETS_DATABASE_URL.
+  const url = process.env.SNIPPETS_DATABASE_URL;
+  if (url) {
+    const dir = join(SRC, "full-stack");
+    const seed = spawnSync(process.execPath, ["seed.ts"], {
+      cwd: dir,
+      env: { ...process.env, DATABASE_URL: url },
+      encoding: "utf8",
+    });
+    if (seed.status === 0) {
+      console.log(`full-stack seed: ${seed.stdout.trim()}`);
+      await serveBooks("full-stack server", dir, { DATABASE_URL: url });
+    } else failures.push(`full-stack seed.ts failed:\n${seed.stderr}`);
+  } else {
+    console.log("full-stack: not run (set SNIPPETS_DATABASE_URL to a scratch database)");
   }
 }
 

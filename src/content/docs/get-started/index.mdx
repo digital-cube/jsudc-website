@@ -1,6 +1,38 @@
 ---
 title: Get started
-description: A UDC server, a React data view, or both, in a few minutes.
+description: A UDC server, a React data view, or both with Postgres, each running in a few minutes.
+sidebar:
+  order: 0
 ---
 
-The quick starts land here once the home page design is approved.
+import { LinkCard } from "@astrojs/starlight/components";
+
+UDC (Universal Data Collections) has two halves that speak one protocol. Start with the half
+you need: the other side can be anything that speaks it, and you can add our half later.
+
+<LinkCard
+  title="A server in ten lines"
+  href="/get-started/server/"
+  description="Fastify, @jsudc/server and a collection of books held in memory. Ask it with curl."
+/>
+<LinkCard
+  title="A React data view in ten lines"
+  href="/get-started/react/"
+  description="UdcProvider and UdcDataView in a Vite app: search, filters, inline edits, every renderer."
+/>
+<LinkCard
+  title="Both, with Postgres"
+  href="/get-started/full-stack/"
+  description="The live example on your machine: databases, migrations, seed, then your own collection in Postgres."
+/>
+
+## What you need
+
+- **Node 24.** The server quick starts run TypeScript as it is (`node server.ts`): Node 24 strips the
+  types itself.
+- **A package manager.** The pages say `npm`; pnpm, yarn and bun work the same.
+- **Postgres**, only for the full stack. The other two keep their rows in memory or ask a server.
+
+Every code block on these pages is a file the site's build compiles against the published
+packages, and the server quick starts are started and asked for their rows, so what you copy
+works with the version on npm.

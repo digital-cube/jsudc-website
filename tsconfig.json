@@ -1,5 +1,6 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  // snippets/ is compiled by scripts/check-snippets.mjs against @jsudc/* in .snippets/
+  "exclude": ["dist", "snippets", ".snippets"]
 }

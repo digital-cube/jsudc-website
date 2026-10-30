@@ -1,0 +1,90 @@
+---
+title: A server in ten lines
+description: Fastify, @jsudc/server and a collection of books held in memory, answering the UDC protocol.
+sidebar:
+  order: 1
+---
+
+import { Code, FileTree, Steps } from "@astrojs/starlight/components";
+import schemaJson from "../../../../snippets/server/collections/books/schema.json?raw";
+import seedJson from "../../../../snippets/server/collections/books/seed.json?raw";
+import sourceYaml from "../../../../snippets/server/collections/books/source.yaml?raw";
+import viewYaml from "../../../../snippets/server/collections/books/view.yaml?raw";
+import serverTs from "../../../../snippets/server/server.ts?raw";
+
+A UDC server is a directory of collections and a few lines that serve it. This one keeps three
+books in memory; swap `kind: memory` for Postgres, a directory of files or an HTTP API later
+without touching the server.
+
+<Steps>
+
+1. Install the server, the protocol package and Fastify:
+
+   ```sh
+   mkdir books-server && cd books-server && npm init -y && npm pkg set type=module
+   npm install @jsudc/server @jsudc/core fastify zod
+   ```
+
+   npm also installs `drizzle-orm` and `pg`, the server's other peers; a memory collection never
+   opens a connection.
+
+2. Lay out one collection, `books`:
+
+   <FileTree>
+   - server.ts
+   - collections/
+     - books/
+       - schema.json the fields
+       - view.yaml how the data view shows it
+       - source.yaml where the rows live
+       - seed.json the rows a memory collection starts with
+   </FileTree>
+
+   <Code code={schemaJson} lang="json" title="collections/books/schema.json" />
+   <Code code={viewYaml} lang="yaml" title="collections/books/view.yaml" />
+   <Code code={sourceYaml} lang="yaml" title="collections/books/source.yaml" />
+   <Code code={seedJson} lang="json" title="collections/books/seed.json" />
+
+3. The server:
+
+   <Code code={serverTs} lang="ts" title="server.ts" />
+
+   `loadRegistry` reads every directory under `collections/`, validates its three files and
+   fails at start on a mistake; `makeSource` turns each `source.yaml` into its source.
+   `udcPlugin` mounts `POST /udc/<action>` on your own Fastify instance.
+
+4. Run it and ask for the books:
+
+   ```sh
+   node server.ts
+   curl -s localhost:5100/udc/list -H 'content-type: application/json' \
+     -d '{"collection":"books","sort":[{"field":"year","dir":"asc"}]}'
+   ```
+
+   ```json
+   {
+     "kind": "udc.list.ok",
+     "id": "",
+     "payload": {
+       "rows": [
+         { "__meta": { "id": "…", "version": 1 }, "title": "The Bridge on the Drina", "year": 1945, … },
+         …
+       ],
+       "next_cursor": null,
+       "total": 3
+     }
+   }
+   ```
+
+</Steps>
+
+Every answer is HTTP 200; the envelope's `kind` says `ok` or `err`. Try `describe` with
+`{"collection":"books"}` to see what a client learns before it draws anything, or `mutate` to add
+a fourth book: a memory collection keeps it until the process ends.
+
+## Next
+
+- The OpenAPI document of every action at `/docs`: drop `swagger: false` and install
+  `@fastify/swagger @fastify/swagger-ui fastify-type-provider-zod`.
+- Draw the books: [a React data view](/get-started/react/) pointed at this server.
+- Keep them in Postgres: [the full stack](/get-started/full-stack/).

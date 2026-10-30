@@ -1,0 +1,93 @@
+---
+title: Both, with Postgres
+description: The live example on your machine, then your own collection kept in Postgres.
+sidebar:
+  order: 3
+---
+
+import { Code, Steps } from "@astrojs/starlight/components";
+import fullStackServer from "../../../../snippets/full-stack/server.ts?raw";
+import seedTs from "../../../../snippets/full-stack/seed.ts?raw";
+
+The [live example](https://jsudc.igor.digitalcube.work) is a server and a React app over thirteen
+collections: companies, tickets, appointments and an org chart in Postgres, files from a
+directory, flights, earthquakes and GitHub repositories from the net, the menu from a YAML file.
+Run it, then do the same with a collection of your own.
+
+## The example on your machine
+
+You need Node 24 and Postgres on localhost with a role `jsudc` (password `123`, `CREATEDB`);
+`backend/.env.example` has the variables that point elsewhere.
+
+<Steps>
+
+1. Clone and install:
+
+   ```sh
+   git clone https://github.com/digital-cube/jsudc-example.git && cd jsudc-example
+   nvm use && npm ci
+   ```
+
+2. The databases. `db:setup` creates `jsudc` and `jsudc_test` and applies the migrations to both:
+   the example's eight tables and the UDC tables (the schema revisions of every Postgres
+   collection).
+
+   ```sh
+   npm run db:setup
+   ```
+
+3. The rows. `seed` writes every Postgres collection's `schema.json` as schema revision 1 and
+   inserts its rows; `--reset` empties them first, back to the files.
+
+   ```sh
+   npm run seed -- --reset
+   ```
+
+4. Start both halves:
+
+   ```sh
+   npm run dev   # server on :5100 (OpenAPI UI at /docs), React app on :5173
+   ```
+
+   Open `localhost:5173/udc/companies`; every collection is in the sidebar.
+
+</Steps>
+
+## Your own collection in Postgres
+
+A collection directory without a `source.yaml` is a Postgres table named like the directory,
+each row a `jsonb` document validated against the collection's active schema revision. Take the
+`books` directory of [the server quick start](/get-started/server/), drop its `source.yaml`, and
+keep `schema.json`, `view.yaml` and `seed.json`.
+
+<Steps>
+
+1. Install the server with its Postgres peers:
+
+   ```sh
+   npm install @jsudc/server @jsudc/core fastify zod drizzle-orm pg
+   ```
+
+2. Create the tables and seed them, once:
+
+   <Code code={seedTs} lang="ts" title="seed.ts" />
+
+   ```sh
+   DATABASE_URL=postgresql://localhost/books node seed.ts
+   # books: 3 rows, schema revision 1 created
+   ```
+
+3. Serve them. The only differences from the memory server are the connection and
+   `ensureUdcSchema`, which creates the UDC tables when they are missing:
+
+   <Code code={fullStackServer} lang="ts" title="server.ts" />
+
+   ```sh
+   DATABASE_URL=postgresql://localhost/books node server.ts
+   ```
+
+</Steps>
+
+The [React data view](/get-started/react/) draws it unchanged. Now the schema editor writes: a
+column added in the browser is a new schema revision in `udc_schema_revisions`, and a field
+marked `index: true` gets its expression index.

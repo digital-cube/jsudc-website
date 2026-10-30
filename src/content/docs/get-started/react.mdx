@@ -1,0 +1,67 @@
+---
+title: A React data view in ten lines
+description: UdcProvider and UdcDataView in a Vite app, drawing a collection with every renderer.
+sidebar:
+  order: 2
+---
+
+import { Code, Steps } from "@astrojs/starlight/components";
+import indexHtml from "../../../../snippets/react/index.html?raw";
+import mainTsx from "../../../../snippets/react/main.tsx?raw";
+import renderersTsx from "../../../../snippets/react/renderers.tsx?raw";
+import viteConfig from "../../../../snippets/react/vite.config.ts?raw";
+
+`<UdcDataView collection="books" />` asks a UDC server what `books` is and draws it: search,
+filter chips and a filter builder, paging, inline edits, the schema editor, and one tab per
+renderer the collection's `view.yaml` lists. The server here is the one from
+[A server in ten lines](/get-started/server/), running on port 5100.
+
+<Steps>
+
+1. A Vite app with React and TypeScript, and the packages:
+
+   ```sh
+   npm create vite@latest books-ui -- --template react-ts && cd books-ui
+   npm install @jsudc/react @jsudc/core @tanstack/react-query radix-ui lucide-react
+   # the peers of every renderer, for @jsudc/react/all:
+   npm install @tanstack/react-table leaflet recharts @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
+   ```
+
+2. Replace `src/main.tsx`:
+
+   <Code code={mainTsx} lang="tsx" title="src/main.tsx" />
+
+   `UdcClient` is the transport from `@jsudc/core/client`; `RENDERERS` registers all seven
+   renderers. The providers around the view are the data view's needs: TanStack Query for the
+   rows, the library's strings, its tooltips and toasts.
+
+3. Send `/udc` to the server:
+
+   <Code code={viteConfig} lang="ts" title="vite.config.ts" />
+
+   <Code code={indexHtml} lang="html" title="index.html" />
+
+4. `npm run dev` and open the page: the books as a table, and a Cards tab.
+
+</Steps>
+
+The data view fills its parent as a flex column, so give the parent a height, as the
+`div` above does. Show another collection by changing the prop; key the view by collection when
+one page switches between them.
+
+## Only the renderers you use
+
+Each renderer is its own subpath, so a page bundles, and you install the peers of, only the ones
+you register:
+
+<Code code={renderersTsx} lang="tsx" title="src/renderers.tsx" />
+
+Pass `renderers={renderers}` to `UdcProvider` instead of `RENDERERS`. A view that lists a
+renderer you did not register shows the others.
+
+## Restyling
+
+`@jsudc/react/styles.css` is compiled with every class prefixed, so it cannot collide with your
+own Tailwind or CSS. Its colours and fonts are CSS variables (`--primary`, `--background`,
+`--border`, …, with a `.dark` set): redefine them in your stylesheet, after the library's, to
+make the data view yours.

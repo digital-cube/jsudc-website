@@ -1,0 +1,12 @@
+{
+  "version": "v1",
+  "core_fields": [],
+  "fields": {
+    "title": { "type": "string", "required": true },
+    "author": { "type": "string" },
+    "year": { "type": "integer", "min": 0 },
+    "pages": { "type": "integer", "min": 1 },
+    "read": { "type": "bool" }
+  },
+  "field_order": ["title", "author", "year", "pages", "read"]
+}
