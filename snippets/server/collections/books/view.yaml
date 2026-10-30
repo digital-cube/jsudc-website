@@ -1,0 +1,13 @@
+default_renderer: table
+available_renderers: [table, cards]
+search:
+  fields: [title, author]
+columns:
+  - { field: title, width: 260 }
+  - { field: author, width: 200 }
+  - { field: year, width: 90, align: right }
+  - { field: pages, width: 90, align: right }
+  - { field: read, width: 80, align: center }
+card_options:
+  title_field: title
+  subtitle_field: author

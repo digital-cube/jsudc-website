@@ -14,7 +14,8 @@
     "check": "astro check",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "shots": "node scripts/shots.mjs"
+    "shots": "node scripts/shots.mjs",
+    "check:snippets": "node scripts/check-snippets.mjs"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.42.7",

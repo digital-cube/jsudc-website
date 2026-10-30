@@ -5,3 +5,4 @@ dist/
 .DS_Store
 # scripts/shots.mjs writes here before it copies the keepers into src/assets
 .shots/
+.snippets/
