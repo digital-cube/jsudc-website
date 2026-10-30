@@ -6,9 +6,10 @@
  *
  *   SITE_URL     the site's own origin, Astro's `site` (default https://jsudc.dev)
  *   EXAMPLE_URL  the live example every "live example" link opens and
- *                scripts/shots.mjs photographs (default https://jsudc.igor.digitalcube.work)
+ *                scripts/shots.mjs photographs (default https://examples.jsudc.dev;
+ *                stage sets https://examples.stage.jsudc.dev)
  */
 const origin = (value, fallback) => (value || fallback).replace(/\/+$/, "");
 
 export const SITE_URL = origin(process.env.SITE_URL, "https://jsudc.dev");
-export const EXAMPLE_URL = origin(process.env.EXAMPLE_URL, "https://jsudc.igor.digitalcube.work");
+export const EXAMPLE_URL = origin(process.env.EXAMPLE_URL, "https://examples.jsudc.dev");
