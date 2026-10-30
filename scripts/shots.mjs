@@ -5,6 +5,8 @@
  * The home page's renderer strip: one screenshot of the live example per view,
  * in the light and the dark theme, cropped to the data view (the example's
  * <main>, without its sidebar), written as src/assets/renderers/<name>-<theme>.webp.
+ * And the Examples pages: one per example route, the whole window (the header's
+ * brand switch is part of the point), as src/assets/examples/<name>-<theme>.webp.
  * Re-run it whenever the example or the library's look changes; the site
  * imports the files, so a build after it picks them up.
  *
@@ -22,16 +24,18 @@ import sharp from "sharp";
 import { EXAMPLE_URL } from "../src/site.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const OUT = join(ROOT, "src", "assets", "renderers");
+const ASSETS = join(ROOT, "src", "assets");
 const BASE = (process.env.SHOTS_BASE || EXAMPLE_URL).replace(/\/$/, "");
 const SCALE = Number(process.env.SHOTS_SCALE || 2);
 const VIEWPORT = { width: 1280, height: 800 };
 const THEMES = ["light", "dark"];
 
 /**
- * One entry per frame of the strip, in its order. `path` opens the renderer's
- * tab; `prepare` runs on the loaded page before the shot (the schema editor is a
- * dialog of the table, not a tab).
+ * One entry per frame of the strip, in its order, then one per example route.
+ * `path` opens the renderer's tab; `prepare` runs on the loaded page before the
+ * shot (the schema editor is a dialog of the table, not a tab). `dir` is the
+ * folder under src/assets (default `renderers`); `window` shoots the whole
+ * viewport instead of <main>.
  */
 const SHOTS = [
   { name: "table", path: "/udc/companies?tab=table" },
@@ -65,6 +69,21 @@ const SHOTS = [
       await page.getByRole("textbox", { name: "Field name" }).fill("website");
     },
   },
+  // The example routes (jsudc-example /examples): `?brand=` picks the brand on arrival
+  // and stores it, so each shot names its own.
+  {
+    name: "default-kit",
+    dir: "examples",
+    window: true,
+    path: "/udc/companies?tab=table&brand=default",
+  },
+  {
+    name: "brand-restyle",
+    dir: "examples",
+    window: true,
+    path: "/udc/companies?tab=table&brand=acme",
+  },
+  { name: "examples-page", dir: "examples", window: true, path: "/examples?brand=default" },
 ];
 
 const only = process.argv.slice(2);
@@ -74,7 +93,9 @@ if (only.length && shots.length !== only.length) {
   process.exit(2);
 }
 
-await mkdir(OUT, { recursive: true });
+for (const dir of new Set(shots.map((s) => s.dir ?? "renderers"))) {
+  await mkdir(join(ASSETS, dir), { recursive: true });
+}
 const browser = await chromium.launch({ channel: process.env.SHOTS_CHANNEL || undefined });
 try {
   for (const theme of THEMES) {
@@ -109,10 +130,10 @@ try {
         await page.evaluate(() => /** @type {HTMLElement} */ (document.activeElement)?.blur());
       }
       await page.waitForTimeout(shot.settle ?? 800);
-      const clip = await main.boundingBox();
+      const clip = shot.window ? { x: 0, y: 0, ...VIEWPORT } : await main.boundingBox();
       if (!clip) throw new Error(`${shot.name}: <main> has no box`);
       const png = await page.screenshot({ clip, animations: "disabled", caret: "hide" });
-      const file = join(OUT, `${shot.name}-${theme}.webp`);
+      const file = join(ASSETS, shot.dir ?? "renderers", `${shot.name}-${theme}.webp`);
       await sharp(png).webp({ quality: 82 }).toFile(file);
       console.log(`${theme.padEnd(5)} ${shot.name.padEnd(13)} ${BASE}${shot.path}`);
     }

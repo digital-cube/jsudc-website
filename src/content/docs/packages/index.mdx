@@ -1,0 +1,49 @@
+---
+title: Packages
+description: The three jsudc packages, the version of each on npm, their changelogs, and what comes next.
+sidebar:
+  order: 0
+---
+
+import PackageTable from "../../../components/PackageTable.astro";
+
+jsudc is three npm packages, one repository each. They share one version line and release
+together: a client and a server speak the same protocol when their minor versions match.
+
+<PackageTable />
+
+## Which ones you install
+
+| You are writing                                  | Install                                         |
+| ------------------------------------------------ | ----------------------------------------------- |
+| A server that answers the UDC protocol           | `@jsudc/server @jsudc/core fastify zod`         |
+| A React app over any UDC server                  | `@jsudc/react @jsudc/core` and the peers below  |
+| A client in another framework, or a script       | `@jsudc/core` (its `@jsudc/core/client`)        |
+
+`@jsudc/react` keeps its heavy dependencies as peers behind subpaths: a host that never shows a
+map imports no `@jsudc/react/map` and installs no Leaflet. The
+[React quick start](/get-started/react/) lists the peers each renderer needs.
+
+## Changelogs
+
+Each repository keeps a `CHANGELOG.md` in the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+format. The site renders the one of the version on npm:
+
+- [`@jsudc/core`](/packages/changelogs/core/)
+- [`@jsudc/server`](/packages/changelogs/server/)
+- [`@jsudc/react`](/packages/changelogs/react/)
+
+## Roadmap
+
+Phase 1, the three packages, the [live example](/examples/) and this site, is out. Phase 2 is
+planned, not started:
+
+- **More design systems.** `@jsudc/ui-mui` and `@jsudc/ui-antd`, UI kits that draw the
+  renderers with Material and Ant components, each with an example route; and a headless table on
+  plain HTML, built on `@jsudc/react/headless` alone. See [Theming](/concepts/theming/).
+- **`@jsudc/react-native`.** The headless hooks shared with React; renderers for the table
+  (FlatList), cards and calendar; the map through react-native-maps.
+- **`@jsudc/angular`.** Services over `@jsudc/core/client`, a signals-based data view state, the
+  table and cards components first.
+- **A mobile example.** An Expo app over the backend of the live example: companies, tickets and
+  flights.

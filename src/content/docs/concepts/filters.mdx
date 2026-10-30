@@ -1,0 +1,73 @@
+---
+title: Filters
+description: The filter DSL — a condition or an and / or / not group, fourteen operators — and how the same JSON travels from the URL to SQL.
+sidebar:
+  order: 4
+---
+
+import LiveExample from "../../../components/LiveExample.astro";
+
+A filter is one JSON value. It is either a **condition** on one field:
+
+```json
+{ "field": "employees", "op": "between", "value": [100, 200] }
+```
+
+or a **group** of filters:
+
+```json
+{
+  "and": [
+    { "field": "city", "op": "eq", "value": "Beograd" },
+    { "not": { "field": "active", "op": "eq", "value": false } }
+  ]
+}
+```
+
+`and` and `or` take a list, `not` takes one filter, and groups nest. A group has exactly its one
+key: `{ "And": [...] }` is an error, not an empty match.
+
+## The operators
+
+| Family     | Ops                                       | `value`                                                         |
+| ---------- | ----------------------------------------- | --------------------------------------------------------------- |
+| equality   | `eq`, `neq`                               | one value                                                       |
+| membership | `in`, `not_in`                            | a list                                                          |
+| text       | `contains`, `starts_with`, `ends_with`    | a string; `case_insensitive: true` to ignore case                |
+| order      | `gt`, `gte`, `lt`, `lte`                  | a number, a date or a datetime                                  |
+| range      | `between`                                 | `[lo, hi]`, both ends included                                  |
+| null       | `is_null`, `is_not_null`                  | none                                                            |
+
+Which operators a field offers depends on its type: a string gets the text ops, a number and a
+date the order ops and `between`, a bool only `eq`. `describe` answers the list per field
+(`filterable`), a view can narrow it, and a source says which ops it runs in
+`capabilities.supported_filter_ops`. The tables per type are on the
+[Filter DSL reference](/reference/filter/).
+
+## Builders
+
+`@jsudc/core` exports a builder per operator, which return exactly the JSON above:
+
+```ts
+import { evaluateFilter, filter } from "@jsudc/core";
+
+const f = filter.and(filter.eq("city", "Beograd"), filter.between("employees", 100, 200));
+
+evaluateFilter(f, { city: "Beograd", employees: 150 }); // true
+```
+
+`evaluateFilter` runs a filter in memory with the semantics of the server's SQL compiler: the
+memory, filesystem and http_api sources use it, and a test or an optimistic update can too.
+
+## One filter, everywhere
+
+The data view composes the search box, the filter chips and the filter builder into one filter
+and keeps it in the URL (`?f=`), so a reload or a shared link shows the same rows. It goes to the
+server as the `filter` of `list`; a Postgres source compiles it to SQL over the jsonb with typed
+casts, the others evaluate it over their rows. The same grammar is the `when` of a row action.
+
+<LiveExample
+  path="/udc/companies?tab=table"
+  title="See it live: companies"
+  description="Search, pick a chip, add a condition in Filter, then look at ?f= in the address bar and reload."
+/>

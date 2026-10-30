@@ -31,7 +31,45 @@ export default defineConfig({
         },
       },
       customCss: ["@fontsource-variable/inter", "./src/styles/theme.css"],
-      sidebar: [{ label: "Get started", items: [{ autogenerate: { directory: "get-started" } }] }],
+      sidebar: [
+        { label: "Get started", items: [{ autogenerate: { directory: "get-started" } }] },
+        { label: "Concepts", items: [{ autogenerate: { directory: "concepts" } }] },
+        {
+          // Written by scripts/gen-reference.mjs from the installed @jsudc/core (npm run gen).
+          label: "Reference",
+          collapsed: true,
+          items: [
+            "reference",
+            "reference/envelope",
+            "reference/filter",
+            {
+              label: "Actions",
+              collapsed: true,
+              items: [{ autogenerate: { directory: "reference/actions" } }],
+            },
+            "reference/schema-json",
+            "reference/view-yaml",
+            {
+              label: "Renderers",
+              collapsed: true,
+              items: [{ autogenerate: { directory: "reference/renderers" } }],
+            },
+            "reference/source-yaml",
+          ],
+        },
+        { label: "Examples", items: [{ autogenerate: { directory: "examples" } }] },
+        {
+          label: "Packages",
+          items: [
+            "packages",
+            // Written by scripts/gen-packages.mjs from each repository's CHANGELOG.md (npm run gen).
+            {
+              label: "Changelogs",
+              items: [{ autogenerate: { directory: "packages/changelogs" } }],
+            },
+          ],
+        },
+      ],
       // "{EXAMPLE_URL}" is the hero's placeholder for the live example (src/components/Hero.astro)
       plugins: [starlightLinksValidator({ exclude: ({ link }) => link === "{EXAMPLE_URL}" })],
       lastUpdated: false,

@@ -1,0 +1,83 @@
+---
+title: A brand restyle
+description: The same companies view as the "Acme" brand — one stylesheet of CSS variables under [data-brand="acme"], no component changes.
+sidebar:
+  order: 2
+---
+
+import ExampleShot from "../../../components/ExampleShot.astro";
+import LiveExample from "../../../components/LiveExample.astro";
+
+The Acme brand is the [token layer](/concepts/theming/#1-tokens-and-classes-restyle-with-css) and
+nothing else: one stylesheet that redefines the variables the components paint from, under
+`html[data-brand="acme"]`, for the light and the dark theme. The switch in the header sets that
+attribute on `<html>`. No component changes, and a test in the example holds the file to
+custom-property declarations only.
+
+<ExampleShot
+  name="brand-restyle"
+  alt="The same companies table as the Acme brand: warm paper background, terracotta accent, a serif font"
+/>
+
+## The host code
+
+The brand, loaded after the library's stylesheet. `html[...]` outranks the library's `:root` and
+`.dark`:
+
+```css title="src/brand.css (excerpt)"
+html[data-brand="acme"] {
+  --background: oklch(0.975 0.012 85);
+  --foreground: oklch(0.27 0.035 50);
+  --surface: oklch(0.993 0.007 85);
+  --muted: oklch(0.95 0.017 80);
+  --border: oklch(0.89 0.022 75);
+  --ring: oklch(0.62 0.16 42);
+  --primary: oklch(0.55 0.165 40);
+  --primary-foreground: oklch(0.99 0.01 85);
+  --selected: oklch(0.925 0.048 55);
+
+  --sem-accent: oklch(0.53 0.16 40);
+  --sem-success: oklch(0.5 0.11 165);
+  --sem-danger: oklch(0.52 0.19 22);
+
+  --radius: 2px;
+  --font-sans: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+html[data-brand="acme"].dark {
+  --background: oklch(0.17 0.014 55);
+  --foreground: oklch(0.93 0.015 80);
+  --primary: oklch(0.7 0.15 45);
+  /* … the dark value of every variable above */
+}
+```
+
+```tsx title="src/main.tsx (excerpt)"
+import "./index.css";
+import "./brand.css";
+import { applyBrand, loadBrand } from "./shell/brand";
+
+// Before the first paint, so a stored brand never flashes the default one.
+applyBrand(loadBrand());
+```
+
+```ts title="src/shell/brand.ts (excerpt)"
+/** Puts `brand` on <html> (only the attribute, nothing stored). */
+export function applyBrand(brand: Brand): void {
+  const root = document.documentElement;
+  if (brand === "default") root.removeAttribute("data-brand");
+  else root.setAttribute("data-brand", brand);
+}
+```
+
+The rest of `brand.ts` stores the choice and reads `?brand=` from a link, so
+`/udc/companies?brand=acme` opens in the brand.
+
+What the variables do not reach, the stable `udc-*` classes do (`udc-table`, `udc-card`,
+`udc-kanban-column`, …): a rule in the host's own CSS wins over the library's utilities.
+
+<LiveExample
+  path="/udc/companies?brand=acme"
+  title="See it live: companies, Acme brand"
+  description="Toggle Default / Acme in the header: the table repaints, nothing reloads."
+/>

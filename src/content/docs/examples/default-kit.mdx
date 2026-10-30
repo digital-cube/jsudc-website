@@ -1,0 +1,95 @@
+---
+title: The default kit
+description: The companies view as @jsudc/react draws it with no styling work — the shipped UI kit, the compiled stylesheet, seven renderers.
+sidebar:
+  order: 1
+---
+
+import ExampleShot from "../../../components/ExampleShot.astro";
+import LiveExample from "../../../components/LiveExample.astro";
+
+What a host gets with no styling work at all: `UdcProvider` without a `kit`, so every renderer
+draws with the default UI kit (Radix primitives styled with Tailwind, from `@jsudc/react/ui`), and
+the compiled stylesheet.
+
+<ExampleShot
+  name="default-kit"
+  alt="The companies table in the example's default look: blue accent, Inter, pinned PIB and Name columns, filter chips"
+/>
+
+## The host code
+
+The stylesheet, imported once. The example also runs its own unprefixed Tailwind for its shell;
+the library's utilities are `udc:`-prefixed, so the two never collide:
+
+```css title="src/index.css"
+@import "@jsudc/react/styles.css";
+@import "tailwindcss";
+@import "@jsudc/react/tokens.css"; /* only for a host whose own Tailwind uses the tokens */
+```
+
+The renderers, registered one by one from their subpaths. A host that never shows a map leaves
+`mapRenderer` out and does not install Leaflet:
+
+```ts title="src/renderers.ts"
+import { createRendererRegistry } from "@jsudc/react";
+import { calendarRenderer } from "@jsudc/react/calendar";
+import { cardsRenderer } from "@jsudc/react/cards";
+import { chartRenderer } from "@jsudc/react/chart";
+import { kanbanRenderer } from "@jsudc/react/kanban";
+import { mapRenderer } from "@jsudc/react/map";
+import { tableRenderer } from "@jsudc/react/table";
+import { treeRenderer } from "@jsudc/react/tree";
+
+export const EXAMPLE_RENDERERS = createRendererRegistry(
+  tableRenderer,
+  cardsRenderer,
+  kanbanRenderer,
+  calendarRenderer,
+  treeRenderer,
+  mapRenderer,
+  chartRenderer,
+);
+```
+
+The providers, with no `kit`, and one route per collection:
+
+```tsx title="src/App.tsx (excerpt)"
+import { UdcClient } from "@jsudc/core/client";
+import { createUdcQueryClient, UdcDataView, UdcProvider } from "@jsudc/react";
+import { UdcReactRouterUrlState } from "@jsudc/react/react-router";
+import { Toaster, TooltipProvider } from "@jsudc/react/ui";
+
+const client = new UdcClient({ httpUrl: "" });
+const queryClient = createUdcQueryClient();
+
+<UdcProvider client={client} renderers={EXAMPLE_RENDERERS}>
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider delayDuration={400}>
+      <Toaster>
+        <BrowserRouter>
+          <UdcReactRouterUrlState>
+            <Routes>
+              <Route path="udc/:collection" element={<CollectionRoute />} />
+            </Routes>
+          </UdcReactRouterUrlState>
+        </BrowserRouter>
+      </Toaster>
+    </TooltipProvider>
+  </QueryClientProvider>
+</UdcProvider>;
+
+function CollectionRoute() {
+  const { collection = "" } = useParams();
+  return <UdcDataView key={collection} collection={collection} />;
+}
+```
+
+`UdcReactRouterUrlState` keeps the tab, search, chips, filter, sort and page in react-router's
+query string; a host without react-router uses the `window.location` adapter instead.
+
+<LiveExample
+  path="/udc/companies?brand=default"
+  title="See it live: companies, default theme"
+  description="The table, the cards and the map of the companies in the default kit."
+/>

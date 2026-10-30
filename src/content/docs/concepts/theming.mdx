@@ -1,0 +1,86 @@
+---
+title: Theming
+description: Three layers so any design system works — headless hooks, a swappable UI kit, and CSS variables with stable udc-* classes.
+sidebar:
+  order: 7
+---
+
+import LiveExample from "../../../components/LiveExample.astro";
+
+`@jsudc/react` is cut into three layers. A host enters at the depth it needs: recolour the
+default look, draw it with its own components, or build its own renderers on the data layer.
+
+## 1. Tokens and classes: restyle with CSS
+
+Import the compiled stylesheet once; it works with or without a Tailwind of your own:
+
+```ts
+import "@jsudc/react/styles.css";
+```
+
+Every colour the components use is a CSS variable on `:root` (light) and `.dark` (dark):
+`--background`, `--foreground`, `--surface`, `--primary`, `--border`, the semantic tones
+`--sem-success` … `--sem-danger`, the chart series `--chart-1` … `--chart-8`. Restyling is
+redefining them after the stylesheet, with no code:
+
+```css
+html[data-brand="acme"] {
+  --background: oklch(0.975 0.012 85);
+  --primary: oklch(0.55 0.165 40);
+  --sem-accent: oklch(0.53 0.16 40);
+}
+```
+
+The library's utilities are compiled with the `udc:` prefix, so they cannot collide with a host's
+Tailwind. For what a variable cannot reach, every structural element carries a stable class:
+`udc-data-view`, `udc-toolbar`, `udc-table`, `udc-row`, `udc-cell`, `udc-card`, `udc-kanban-column`,
+`udc-calendar-event`, `udc-tree-node`, `udc-map`, `udc-chart` and more. A rule in the host's own
+(unlayered) CSS wins over the library's utilities without `!important`:
+
+```css
+.udc-table .udc-row .udc-cell:first-child {
+  font-weight: 600;
+}
+.udc-card {
+  border-radius: 0;
+}
+```
+
+## 2. The UI kit: your own components
+
+The renderers never import a button, a dialog or a menu. They take every primitive from a **UI
+kit** in context (`useUiKit()`): `Button`, `Input`, `Checkbox`, `Select`, `Dialog`,
+`DropdownMenu`, `Popover`, `Tooltip`, `Toast`, `Segmented`, `Spinner`. The kit the package ships,
+Radix primitives styled with Tailwind in the shadcn pattern, is `defaultUiKit` from
+`@jsudc/react/ui`. Hand another one to the provider and the same data view draws with Material,
+Ant Design or your own shadcn components:
+
+```tsx
+<UdcProvider client={client} kit={myKit}>
+  <UdcDataView collection="companies" />
+</UdcProvider>
+```
+
+Kits for MUI and Ant Design are planned as `@jsudc/ui-mui` and `@jsudc/ui-antd` (phase 2).
+
+## 3. Headless: your own renderers
+
+`@jsudc/react/headless` is the data layer under the renderers, with no JSX, no CSS and no renderer
+peer: the hooks (`useUdcDescribe`, `useUdcCollection`, `useUdcAllRows`, `useUdcMutate`), the data
+view's URL state (`useDataViewState`), each renderer's model (`useKanbanBoard`, `useChartWindow`,
+the tree's drop planner, …) and the cell formatters. A host on any design system builds its own
+table on it and gets the same queries, filters, paging and URL as `UdcDataView`.
+
+## Which layer
+
+| You want                                            | Layer                          |
+| --------------------------------------------------- | ------------------------------ |
+| your brand's colours, radius, a denser table        | tokens and `udc-*` classes     |
+| the data view drawn with your design system         | a UI kit                       |
+| a renderer the library does not have, or no React DOM look at all | headless hooks   |
+
+<LiveExample
+  path="/udc/companies?tab=table&brand=acme"
+  title="See it live: the Acme brand"
+  description="The same companies table restyled by CSS variables only; switch Default / Acme in the header."
+/>

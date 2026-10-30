@@ -1,0 +1,52 @@
+---
+title: Concepts
+description: The ideas behind jsudc — collections, sources, the protocol, filters, schema revisions, views and theming.
+sidebar:
+  order: 0
+---
+
+import { LinkCard } from "@astrojs/starlight/components";
+
+A UDC (Universal Data Collection) is data described once, in three small files, and served and
+drawn from that description. The server reads the files and answers one protocol; the client
+asks the protocol and draws whatever the view describes. Neither side has code for a particular
+collection.
+
+These pages explain the parts in the order you meet them. The [Reference](/reference/) has every
+key of every file and message, generated from `@jsudc/core`.
+
+<LinkCard
+  title="Collections"
+  href="/concepts/collections/"
+  description="A directory with schema.json, view.yaml and source.yaml: what each file says."
+/>
+<LinkCard
+  title="Sources"
+  href="/concepts/sources/"
+  description="Where the rows live: Postgres jsonb, memory, a directory, an HTTP API or a YAML menu."
+/>
+<LinkCard
+  title="The envelope"
+  href="/concepts/envelope/"
+  description="One message shape, eleven actions, request, ok and err kinds, closed error codes."
+/>
+<LinkCard
+  title="Filters"
+  href="/concepts/filters/"
+  description="The filter DSL: conditions, and / or / not, fourteen operators, the same JSON everywhere."
+/>
+<LinkCard
+  title="Schema revisions"
+  href="/concepts/schema-revisions/"
+  description="Adding, changing and soft-deleting a field at runtime, one numbered revision per edit."
+/>
+<LinkCard
+  title="Views and renderers"
+  href="/concepts/views/"
+  description="view.yaml picks the renderers; seven renderers and a schema editor draw the same rows."
+/>
+<LinkCard
+  title="Theming"
+  href="/concepts/theming/"
+  description="Three layers: headless hooks, a UI kit you can swap, and CSS variables with stable classes."
+/>

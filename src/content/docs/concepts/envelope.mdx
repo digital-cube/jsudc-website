@@ -1,0 +1,80 @@
+---
+title: The envelope
+description: Every UDC request and answer is one message — kind, id, payload — over HTTP; eleven actions, three kinds each, six error codes.
+sidebar:
+  order: 3
+---
+
+import LiveExample from "../../../components/LiveExample.astro";
+
+Client and server speak one protocol, and every message has the same three keys:
+
+```json
+{ "kind": "udc.list", "id": "7", "payload": { "collection": "companies", "page": { "limit": 50 } } }
+```
+
+- `kind` names the action and says whether this is a request or an answer;
+- `id` pairs an answer with its request;
+- `payload` is the action's own request or response.
+
+## Request and response kinds
+
+A request's kind is `udc.<action>`. Its answer is `udc.<action>.ok` with the response payload, or
+`udc.<action>.err` with an error payload:
+
+```json
+{ "kind": "udc.list.ok", "id": "7", "payload": { "rows": [], "next_cursor": null, "total": 0 } }
+{ "kind": "udc.list.err", "id": "7", "payload": { "code": "not_found", "message": "no collection compnies" } }
+```
+
+`@jsudc/core` builds and splits the kinds (`requestKind`, `okKind`, `errKind`, `parseKind`), so
+neither side spells them.
+
+## The actions
+
+| Action                                                          | What it does                                                         |
+| --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| [`collections`](/reference/actions/collections/)                | what the server serves                                               |
+| [`describe`](/reference/actions/describe/)                      | one collection's schema, view, capabilities and filterable fields    |
+| [`list`](/reference/actions/list/)                              | rows, with a filter, a sort and a page                               |
+| [`read`](/reference/actions/read/)                              | one row by id                                                        |
+| [`mutate`](/reference/actions/mutate/)                          | insert, update or delete one row                                     |
+| [`schema.add_field`](/reference/actions/schema-add_field/)      | add a field (a new [revision](/concepts/schema-revisions/))          |
+| [`schema.update_field`](/reference/actions/schema-update_field/) | change a field's label, constraints, index                          |
+| [`schema.soft_delete_field`](/reference/actions/schema-soft_delete_field/) | hide a field, keep its data                               |
+| [`reindex`](/reference/actions/reindex/)                        | renumber an order field when two neighbours left no room             |
+| [`tree.reparent`](/reference/actions/tree-reparent/)            | move a tree node and keep depth and ancestors consistent             |
+| [`source.read`](/reference/actions/source-read/)                | the file a file-backed collection is read from                       |
+
+`ACTIONS` in `@jsudc/core` maps every name to its request and response schema, so the server
+dispatches generically and the client is typed per action.
+
+## Over HTTP
+
+Each action is `POST <base>/udc/<action>` with the request payload as the body; the answer is the
+envelope. `@jsudc/server` mounts the routes on your Fastify instance, with the OpenAPI document of
+every action; `UdcClient` from `@jsudc/core/client` is the browser and Node side.
+
+```sh
+curl -s localhost:5100/udc/list -H 'content-type: application/json' \
+  -d '{"collection":"companies","page":{"limit":2}}'
+```
+
+## Rows and versions
+
+A row is flat: its fields at the top level and `__meta` with its `id` and `version`. `update` and
+`delete` carry `expected_version`; a row someone changed in the meantime fails with
+`version_conflict` instead of being overwritten, and the data view shows their value.
+
+## Errors
+
+An error payload has a `code` from a closed set (`not_found`, `validation_error`,
+`version_conflict`, `forbidden`, `unsupported_op`, `internal`), a `message` for people and
+optional `details`. `UdcError` is the matching exception on both sides. Every key:
+[Envelope and errors](/reference/envelope/).
+
+<LiveExample
+  path="/udc/companies?tab=table"
+  title="See it live: companies"
+  description="Open the network tab: every request the table makes is one POST /udc/<action> with an envelope back."
+/>

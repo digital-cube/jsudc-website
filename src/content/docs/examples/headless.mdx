@@ -1,0 +1,38 @@
+---
+title: Headless (phase 2)
+description: Planned — a companies table on plain HTML, built on @jsudc/react/headless alone.
+sidebar:
+  label: Headless
+  order: 5
+  badge:
+    text: Phase 2
+    variant: note
+---
+
+:::note[Not built yet]
+This route is planned for phase 2 of jsudc and is not in the live example yet. The hooks it uses
+ship today in `@jsudc/react/headless`.
+:::
+
+The [headless layer](/concepts/theming/#3-headless-your-own-renderers): no renderer, no UI kit, no
+stylesheet. The route will draw the companies as a plain `<table>` from the same hooks the
+renderers use, and keep the same URL state:
+
+```tsx
+import { useDataViewState, useUdcCollection, useUdcDescribe } from "@jsudc/react/headless";
+
+function CompaniesTable() {
+  const describe = useUdcDescribe("companies");
+  const state = useDataViewState("companies", describe.data?.view);
+  const rows = useUdcCollection({
+    collection: "companies",
+    sort: state.sort, // composeFilter(…) adds the search, chips and filter tree as `filter`
+    mode: "pages",
+    pageLimit: 50,
+  });
+  // a <table> over describe.data.view.columns and the rows
+}
+```
+
+The exact signatures are in the [`@jsudc/react` README](https://github.com/digital-cube/jsudc-react#headless).
+Follow the [roadmap](/packages/#roadmap).

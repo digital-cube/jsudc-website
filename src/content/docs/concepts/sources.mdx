@@ -1,0 +1,82 @@
+---
+title: Sources
+description: Where a collection's rows come from — postgres_jsonb, memory, filesystem, http_api and yaml_menu — and what each can do.
+sidebar:
+  order: 2
+---
+
+import LiveExample from "../../../components/LiveExample.astro";
+
+A **source** is where a collection's rows live. `source.yaml` picks one with `kind`; without the
+file it is `postgres_jsonb`. Every source answers the same actions, so a client cannot tell a
+table from an HTTP API, except by what the source says it can do.
+
+| `kind`                     | Rows                                                                                     | Writes                                      |
+| -------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `postgres_jsonb` (default) | a table, every field in one `data jsonb` column; `options.table` overrides the name      | mutate, schema edits, reindex, reparent     |
+| `memory`                   | `seed.json`, kept in the process                                                         | mutate, reindex, reparent (lost on restart) |
+| `filesystem`               | the entries of one directory under `options.root`                                        | read-only                                   |
+| `http_api`                 | one upstream call mapped into rows, cached for `cache_ttl_ms`                             | read-only                                   |
+| `yaml_menu`                | a YAML tree (`options.file`) flattened into rows                                         | read-only                                   |
+
+## Capabilities
+
+`describe` answers a `capabilities` block per collection: `mutate`, `schema_edit`, `reindex`,
+`tree_reparent`, `total_count`, how it pages (`cursor`, `offset` or both) and the filter operators
+it supports. The data view reads it: a read-only source gets no inline edit and no *Add column*;
+an array-backed source pages by offset. Every key:
+[Capabilities](/reference/envelope/#capabilities).
+
+## postgres_jsonb
+
+One table per collection, every field inside a `data jsonb` column next to `id`, `version` and
+the timestamps. Filters and sorts compile to SQL over the jsonb with typed casts (so `10` sorts
+after `9`); the fields marked `index: true` get expression indexes. The schema is stored as
+numbered revisions in `udc_schema_revisions`, so it can change at runtime (see
+[Schema revisions](/concepts/schema-revisions/)). The host runs the library's SQL once
+(`ensureUdcSchema(db)` or the shipped migrations) and owns its collection tables.
+
+## memory
+
+`seed.json` loaded into the process: the whole protocol, writes included, with no database. Made
+for tests, demos and quick starts, as in [A server in ten lines](/get-started/server/).
+
+## filesystem
+
+The entries of one directory as rows (`path`, `name`, `kind`, `ext`, `size`, `mtime`). A
+`path eq <dir>` condition picks the directory listed; `folder_options` in the view turns folder
+rows into links and a breadcrumb. `root` is relative to the collection directory and may not
+climb out of it with `..`.
+
+## http_api
+
+One call to an upstream JSON API, mapped into rows by `field_map` (paths such as
+`geometry.coordinates[1]` or `authors[*].name`) and kept for `cache_ttl_ms`. Filters, sorts and
+pages run over that copy. When upstream fails after a good fetch, the last copy is served and the
+list answer says `stale`. Headers can read `${VAR}` from the environment the host passes; an
+optional OAuth2 client-credentials block gets and refreshes a bearer token; `history` keeps a
+sliding window of past values per row, for a sparkline or a trail on the map.
+
+## yaml_menu
+
+A YAML tree, flattened into rows with `parent_id`, `order` and `depth`, re-read when the file
+changes. A branch can say `children: "udc:collections"` and list the collections the server
+serves. The example's sidebar is this collection drawn as chrome.
+
+The options of every kind, key by key: [source.yaml reference](/reference/source-yaml/).
+
+<LiveExample
+  path="/udc/quakes?tab=map"
+  title="See it live: quakes (http_api)"
+  description="The USGS feed of the last month's earthquakes, mapped and cached by an http_api source."
+/>
+<LiveExample
+  path="/udc/files?tab=table"
+  title="See it live: files (filesystem)"
+  description="A directory on the server as rows, with folder navigation from folder_options."
+/>
+<LiveExample
+  path="/udc/menu?tab=tree"
+  title="See it live: menu (yaml_menu)"
+  description="The example's own menu file, drawn as a tree."
+/>

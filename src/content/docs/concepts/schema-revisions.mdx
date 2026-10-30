@@ -1,0 +1,59 @@
+---
+title: Schema revisions
+description: How a Postgres collection's schema changes at runtime — add, update and soft-delete a field — one numbered, atomic revision per edit.
+sidebar:
+  order: 5
+---
+
+import LiveExample from "../../../components/LiveExample.astro";
+
+A Postgres collection's fields can change while it runs: a person adds a column from the table
+header, and every client sees it at the next `describe`. No migration, no deploy. Each change is
+a **revision** of the schema.
+
+## Where the schema lives
+
+`schema.json` is revision 1. Seeding the collection (`seedCollection`) stores it in the table
+`udc_schema_revisions` as the active revision. From then on the server serves the active row of
+that table, not the file. The wire `version` is `"v1"`, `"v2"`, …; at most one revision of a
+collection is active.
+
+Rows are not touched by a revision. Every field sits in the row's `data jsonb`, so adding a field
+needs no `ALTER TABLE`, and a row written before the field existed simply has no value for it.
+
+## Three edits
+
+| Action                                                                      | What changes                                                                                      |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| [`schema.add_field`](/reference/actions/schema-add_field/)                  | a new field, at `{ where: "before" \| "after" \| "end", anchor }` in the field order              |
+| [`schema.update_field`](/reference/actions/schema-update_field/)            | a field's definition: label, description, `required`, `min` / `max`, `index`; never its type      |
+| [`schema.soft_delete_field`](/reference/actions/schema-soft_delete_field/)  | the field is marked `deleted: true`: hidden from views and forms, its data kept in every row      |
+
+Each edit runs in one transaction: read the active revision, apply the edit, insert revision
+`max + 1`, move `active` to it and sync the field indexes (`index: true` creates an expression
+index, its removal drops it). Concurrent editors of one collection serialise on an advisory lock;
+one that loses a race is retried once and otherwise answers `version_conflict`. The answer is the
+new schema.
+
+## What is refused
+
+- a name that is not lowercase snake_case, or one already taken, even by a soft-deleted field
+  (`validation_error`): a soft-deleted name stays reserved, so old data never reappears under a
+  new meaning;
+- a type change (`unsupported_op`): soft-delete the field and add a new one;
+- a type jsudc cannot store yet (`unsupported_op`): phase 1 stores `string`, `text`, `integer`,
+  `decimal`, `year`, `bool`, `date`, `datetime` and `json`;
+- an edit on a source that cannot (`capabilities.schema_edit` is false): memory, files and HTTP
+  APIs keep the schema of their files.
+
+## In the data view
+
+`@jsudc/react` draws the schema editor from the same actions: *Add column before / after* and
+*Edit column* in a header's menu, *Delete column* behind a confirmation. Labels are written per
+language, the field name is suggested from the English label and validated as you type.
+
+<LiveExample
+  path="/udc/companies?tab=table"
+  title="See it live: companies"
+  description="Open a header's ⋮ menu, Add column after, name it website: a new revision, no reload."
+/>
