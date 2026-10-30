@@ -1,0 +1,98 @@
+---
+/* The three packages as rows, each with its npm badge. */
+const packages = [
+  {
+    name: "core",
+    text: "The protocol: envelopes, the filter language and its evaluator, the schema, view and source types, row validation, and the transport client.",
+  },
+  {
+    name: "server",
+    text: "Dispatcher, registry, five sources, the schema store and its revisions, seeding, and a Fastify plugin with the OpenAPI of every action.",
+  },
+  {
+    name: "react",
+    text: "The data view, seven renderers, the schema editor, hooks over TanStack Query, a headless layer, and a stylesheet you restyle with CSS variables.",
+  },
+];
+---
+
+<section class="pkgs not-content" aria-labelledby="packages">
+  <h2 id="packages">Three packages, one version line</h2>
+  <ul>
+    {
+      packages.map(({ name, text }) => (
+        <li>
+          <a class="name" href={`https://github.com/digital-cube/jsudc-${name}`}>
+            @jsudc/{name}
+          </a>
+          <p>{text}</p>
+          <a href={`https://www.npmjs.com/package/@jsudc/${name}`}>
+            <img
+              src={`https://img.shields.io/npm/v/@jsudc/${name}?label=npm&color=2f8f5b`}
+              alt={`@jsudc/${name} on npm`}
+              width="80"
+              height="20"
+              loading="lazy"
+            />
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+  <p class="licence">MIT licence, as is the site. One semver line: the protocol has to match on both sides.</p>
+</section>
+
+<style>
+  .pkgs {
+    margin-top: 6rem;
+  }
+  h2 {
+    font-size: clamp(1.6rem, 3vw, 2.125rem);
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    font-weight: 650;
+    color: var(--sl-color-white);
+  }
+  ul {
+    margin-top: 1.5rem;
+    padding: 0;
+    list-style: none;
+  }
+  li {
+    display: grid;
+    gap: 0.5rem 2rem;
+    align-items: center;
+    padding: 1.375rem 0;
+    border-top: 1px solid var(--jsudc-border);
+  }
+  li:last-child {
+    border-bottom: 1px solid var(--jsudc-border);
+  }
+  .name {
+    font: 600 1rem var(--sl-font-mono);
+    color: var(--sl-color-white);
+    text-decoration: none;
+  }
+  .name:hover {
+    color: var(--sl-color-text-accent);
+  }
+  li p {
+    color: var(--sl-color-gray-2);
+    font-size: 0.9375rem;
+  }
+  img {
+    display: block;
+    height: 20px;
+    width: auto;
+  }
+  .licence {
+    margin-top: 1.25rem;
+    color: var(--sl-color-gray-3);
+    font-size: 0.875rem;
+  }
+  @media (min-width: 50rem) {
+    li {
+      grid-template-columns: 13.75rem 1fr auto;
+    }
+  }
+</style>

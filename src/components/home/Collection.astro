@@ -1,0 +1,98 @@
+---
+/*
+ * What a collection is: the three files of the live example's `repos`
+ * directory side by side, in one frame (abridged copies in src/home/repos;
+ * check-snippets validates them against @jsudc/core).
+ */
+import { Code } from "@astrojs/starlight/components";
+import schema from "../../home/repos/schema.json?raw";
+import source from "../../home/repos/source.yaml?raw";
+import view from "../../home/repos/view.yaml?raw";
+
+const files = [
+  { name: "schema.json", role: "the fields", code: schema, lang: "json", mark: undefined },
+  { name: "view.yaml", role: "how it is shown", code: view, lang: "yaml", mark: 2 },
+  { name: "source.yaml", role: "where the rows live", code: source, lang: "yaml", mark: undefined },
+];
+---
+
+<figure class="collection not-content" aria-labelledby="collection-caption">
+  <figcaption id="collection-caption">
+    <span class="path">collections/<b>repos</b>/</span>
+    <span>The public GitHub repositories of digital-cube, a collection of the live example (abridged)</span>
+  </figcaption>
+  <div class="files">
+    {
+      files.map((f) => (
+        <section class="file" aria-label={f.name}>
+          <h3>
+            {f.name} <span>{f.role}</span>
+          </h3>
+          <Code code={f.code.trimEnd()} lang={f.lang} frame="none" mark={f.mark} wrap />
+        </section>
+      ))
+    }
+  </div>
+</figure>
+
+<style>
+  .collection {
+    margin: 0;
+    border: 1px solid var(--jsudc-border-strong);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--jsudc-code-bg);
+  }
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    padding: 0.625rem 1.125rem;
+    border-bottom: 1px solid var(--jsudc-border);
+    background: var(--jsudc-surface);
+    font-size: 0.8125rem;
+    color: var(--sl-color-gray-3);
+  }
+  .path {
+    font-family: var(--sl-font-mono);
+  }
+  .path b {
+    color: var(--sl-color-white);
+    font-weight: 600;
+  }
+  .files {
+    display: grid;
+  }
+  .file + .file {
+    border-top: 1px solid var(--jsudc-border);
+  }
+  h3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.875rem 1.125rem 0;
+    font: 600 0.8125rem var(--sl-font-mono);
+    color: var(--sl-color-white);
+  }
+  h3 span {
+    font: 400 0.8125rem var(--sl-font);
+    color: var(--sl-color-gray-3);
+  }
+  .file :global(.expressive-code) {
+    --ec-codeBg: transparent;
+  }
+  .file :global(.expressive-code pre) {
+    border: 0;
+    font-size: 0.78rem;
+  }
+  @media (min-width: 64rem) {
+    .files {
+      grid-template-columns: 1fr 1.25fr 1fr;
+    }
+    .file + .file {
+      border-top: 0;
+      border-left: 1px solid var(--jsudc-border);
+    }
+  }
+</style>

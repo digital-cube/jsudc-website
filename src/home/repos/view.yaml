@@ -1,0 +1,14 @@
+default_renderer: cards
+available_renderers: [cards, table, chart]
+search:
+  fields: [name, description]
+filters:
+  - { field: language, kind: select }
+  - { field: archived, kind: bool }
+columns:
+  - { field: name, pin: left, width: 220 }
+  - { field: language, render: badge }
+chart_options:
+  type: pie
+  category_field: name
+  value_field: stargazers_count

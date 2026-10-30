@@ -29,7 +29,7 @@ const THEMES = ["light", "dark"];
 
 /**
  * One entry per frame of the strip, in its order. `path` opens the renderer's
- * tab; `then` runs on the loaded page before the shot (the schema editor is a
+ * tab; `prepare` runs on the loaded page before the shot (the schema editor is a
  * dialog of the table, not a tab).
  */
 const SHOTS = [
@@ -41,7 +41,7 @@ const SHOTS = [
     name: "tree",
     path: "/udc/org?tab=tree",
     // The org chart opens one level deep; open the first few departments too.
-    then: async (page) => {
+    prepare: async (page) => {
       for (let i = 0; i < 3; i++) {
         const closed = page.locator('main [role="treeitem"][aria-expanded="false"]').first();
         if (!(await closed.count())) break;
@@ -58,7 +58,7 @@ const SHOTS = [
   {
     name: "schema-editor",
     path: "/udc/companies?tab=table",
-    then: async (page) => {
+    prepare: async (page) => {
       await page.getByRole("button", { name: "Add column", exact: true }).click();
       await page.getByRole("dialog").waitFor();
       await page.getByRole("textbox", { name: "Field name" }).fill("website");
@@ -102,7 +102,7 @@ try {
         .first()
         .waitFor({ state: "detached", timeout: 15_000 })
         .catch(() => {});
-      if (shot.then) await shot.then(page);
+      if (shot.prepare) await shot.prepare(page);
       // No focus ring from the steps above, unless a dialog holds the focus.
       if (!(await page.getByRole("dialog").count())) {
         await page.evaluate(() => /** @type {HTMLElement} */ (document.activeElement)?.blur());

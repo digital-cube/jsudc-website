@@ -1,0 +1,89 @@
+---
+/*
+ * The splash hero (Starlight's `Hero` overridden): the headline and lede on the
+ * left, the two actions and the install line on the right. Every value comes
+ * from the page's `hero` frontmatter; `install` is an extra action-less line.
+ */
+import { LinkButton } from "@astrojs/starlight/components";
+
+const { data } = Astro.locals.starlightRoute.entry;
+const { title = data.title, tagline, actions = [] } = data.hero || {};
+---
+
+<div class="hero not-content">
+  <div class="copy">
+    <h1 id="_top" data-page-title set:html={title} />
+    {tagline && <p class="lede" set:html={tagline} />}
+  </div>
+  {
+    actions.length > 0 && (
+      <div class="actions">
+        {actions.map(({ link, text, variant }) => (
+          <LinkButton href={link} variant={variant === "minimal" ? "secondary" : variant}>
+            {text}
+          </LinkButton>
+        ))}
+        <code class="install">npm install @jsudc/react</code>
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .hero {
+    display: grid;
+    gap: 2rem;
+    padding-block: 3rem 2.5rem;
+  }
+  h1 {
+    font-size: clamp(2.6rem, 6vw, 4.25rem);
+    line-height: 1.02;
+    letter-spacing: -0.04em;
+    font-weight: 680;
+    color: var(--sl-color-white);
+    max-width: 15ch;
+    text-wrap: balance;
+  }
+  .lede {
+    margin-top: 1.5rem;
+    max-width: 62ch;
+    font-size: 1.1875rem;
+    line-height: 1.55;
+    color: var(--sl-color-gray-2);
+  }
+  .lede :global(code) {
+    font-size: 0.86em;
+    color: var(--sl-color-white);
+    background: var(--sl-color-accent-low);
+    padding: 0.05em 0.3em;
+    border-radius: 4px;
+  }
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    min-width: 15rem;
+  }
+  .actions :global(.sl-link-button) {
+    justify-content: center;
+    margin: 0;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    padding: 0.8rem 1.4rem;
+  }
+  .install {
+    margin-top: 0.25rem;
+    text-align: center;
+    font-family: var(--sl-font-mono);
+    font-size: 0.8125rem;
+    color: var(--sl-color-gray-3);
+  }
+  @media (min-width: 60rem) {
+    .hero {
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      gap: 3rem;
+      padding-block: 4.5rem 3rem;
+    }
+  }
+</style>

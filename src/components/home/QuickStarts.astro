@@ -1,0 +1,100 @@
+---
+/* Three quick starts as tabs. The code is the snippets/ files Get started shows
+   and scripts/check-snippets.mjs compiles. */
+import { Code, TabItem, Tabs } from "@astrojs/starlight/components";
+import reactTsx from "../../../snippets/react/main.tsx?raw";
+import serverTs from "../../../snippets/server/server.ts?raw";
+
+const fullStack = `git clone https://github.com/digital-cube/jsudc-example.git && cd jsudc-example
+nvm use && npm ci
+npm run db:setup         # create the databases, apply the migrations
+npm run seed -- --reset  # every collection: schema revision 1 and its rows
+npm run dev              # server :5100, React app :5173`;
+---
+
+<section class="start" aria-labelledby="start">
+  <h2 id="start" class="not-content">Start where you are</h2>
+  <Tabs syncKey="quick-start">
+    <TabItem label="A server">
+      <div class="body">
+        <Code code={serverTs.trimEnd()} lang="ts" title="server.ts" />
+        <ol class="not-content">
+          <li><code>npm install @jsudc/server @jsudc/core fastify zod</code></li>
+          <li>
+            Next to it, a <code>collections/books/</code> directory with a <code>schema.json</code>, a
+            <code>view.yaml</code> and a <code>source.yaml</code> of <code>kind: memory</code>.
+          </li>
+          <li>
+            <code>node server.ts</code>, then ask it for the books:
+            <code>curl localhost:5100/udc/list -H 'content-type: application/json' -d '&#123;"collection":"books"&#125;'</code>
+          </li>
+        </ol>
+      </div>
+    </TabItem>
+    <TabItem label="A React data view">
+      <div class="body">
+        <Code code={reactTsx.trimEnd()} lang="tsx" title="src/main.tsx" />
+        <ol class="not-content">
+          <li><code>npm install @jsudc/react @jsudc/core react react-dom @tanstack/react-query radix-ui lucide-react</code></li>
+          <li>And the peers of the renderers you register; all of them for <code>@jsudc/react/all</code>.</li>
+          <li>Point it at any UDC server: same origin, through your dev server's proxy, or with CORS.</li>
+        </ol>
+      </div>
+    </TabItem>
+    <TabItem label="Both, with Postgres">
+      <div class="body">
+        <Code code={fullStack} lang="sh" title="Terminal" />
+        <ol class="not-content">
+          <li>Node 24 and a Postgres role <code>jsudc</code> with <code>CREATEDB</code>.</li>
+          <li>The example is the live demo: thirteen collections, five kinds of source.</li>
+          <li>Open <code>localhost:5173</code>; every collection is in the sidebar.</li>
+        </ol>
+      </div>
+    </TabItem>
+  </Tabs>
+  <a class="more not-content" href="/get-started/">The three quick starts in full, on Get started</a>
+</section>
+
+<style>
+  .start {
+    margin-top: 6rem;
+  }
+  h2 {
+    font-size: clamp(1.6rem, 3vw, 2.125rem);
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    font-weight: 650;
+    color: var(--sl-color-white);
+    margin-bottom: 1.25rem;
+  }
+  .body {
+    display: grid;
+    gap: 1.5rem 3rem;
+  }
+  ol {
+    padding-left: 1.25rem;
+    color: var(--sl-color-gray-2);
+  }
+  li + li {
+    margin-top: 0.875rem;
+  }
+  ol code {
+    font-size: 0.84em;
+    word-break: break-word;
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-white);
+    padding: 0.05em 0.3em;
+    border-radius: 4px;
+  }
+  .more {
+    display: inline-block;
+    margin-top: 1.5rem;
+    font-weight: 600;
+    color: var(--sl-color-text-accent);
+  }
+  @media (min-width: 64rem) {
+    .body {
+      grid-template-columns: 7fr 5fr;
+    }
+  }
+</style>

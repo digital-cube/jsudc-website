@@ -31,9 +31,7 @@
   --jsudc-border-strong: oklch(0.34 0.018 265);
   --jsudc-primary: oklch(0.66 0.17 268);
   --jsudc-primary-foreground: oklch(0.16 0.02 265);
-  --jsudc-muted: oklch(0.68 0.02 262);
-  --jsudc-key: oklch(0.76 0.13 268);
-  --jsudc-string: oklch(0.76 0.13 155);
+  --jsudc-code-bg: oklch(0.185 0.013 265);
 }
 
 :root[data-theme="light"] {
@@ -58,11 +56,21 @@
   --jsudc-border-strong: oklch(0.86 0.01 260);
   --jsudc-primary: oklch(0.52 0.2 268);
   --jsudc-primary-foreground: oklch(0.99 0 0);
-  --jsudc-muted: oklch(0.52 0.02 262);
-  --jsudc-key: oklch(0.5 0.2 268);
-  --jsudc-string: oklch(0.47 0.13 155);
+  --jsudc-code-bg: oklch(0.975 0.004 260);
 }
 
 ::selection {
   background: color-mix(in oklch, var(--sl-color-accent) 25%, transparent);
+}
+
+/* The home page (the only page with a hero) is wider than a docs page, and its
+   one content panel needs no rule above the content. */
+html[data-has-hero]:not([data-has-sidebar]) {
+  --sl-content-width: 72.5rem;
+}
+html[data-has-hero] .content-panel + .content-panel {
+  border-top: 0;
+}
+html[data-has-hero] main {
+  padding-bottom: 6rem;
 }

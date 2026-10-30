@@ -1,7 +1,27 @@
 ---
 title: jsudc
-description: Describe a collection once. Serve it with @jsudc/server, show it with @jsudc/react.
+description: Describe a collection in three small files. @jsudc/server serves it over one JSON protocol; @jsudc/react draws it as a table, cards, a board, a calendar, a tree, a map or a chart.
 template: splash
+hero:
+  title: Describe a collection. Get the whole data UI.
+  tagline: A collection is three small files. Its fields go in <code>schema.json</code>, how it looks in <code>view.yaml</code>, and where its rows live in <code>source.yaml</code>. The server answers for it over one JSON protocol, and the React data view draws it with search, filters, inline edits and a schema editor.
+  actions:
+    - text: Get started
+      link: /get-started/
+      variant: primary
+    - text: Open the live example
+      link: https://jsudc.igor.digitalcube.work
+      variant: secondary
 ---
 
-The home page is being designed; its mockup waits for review. Meanwhile, [Get started](/get-started/).
+import Collection from "../../components/home/Collection.astro";
+import Packages from "../../components/home/Packages.astro";
+import Protocol from "../../components/home/Protocol.astro";
+import QuickStarts from "../../components/home/QuickStarts.astro";
+import RendererStrip from "../../components/home/RendererStrip.astro";
+
+<Collection />
+<RendererStrip />
+<Protocol />
+<QuickStarts />
+<Packages />

@@ -13,6 +13,20 @@ export default defineConfig({
       logo: { src: "./src/assets/logo.svg", replacesTitle: false },
       favicon: "/favicon.svg",
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/digital-cube" }],
+      components: {
+        Hero: "./src/components/Hero.astro",
+        SocialIcons: "./src/components/SocialIcons.astro",
+      },
+      expressiveCode: {
+        themes: ["github-dark-default", "github-light-default"],
+        styleOverrides: {
+          borderRadius: "12px",
+          borderColor: "var(--jsudc-border-strong)",
+          codeFontSize: "0.8125rem",
+          codeLineHeight: "1.7",
+          frames: { shadowColor: "transparent" },
+        },
+      },
       customCss: ["@fontsource-variable/inter", "./src/styles/theme.css"],
       sidebar: [{ label: "Get started", items: [{ autogenerate: { directory: "get-started" } }] }],
       plugins: [starlightLinksValidator()],

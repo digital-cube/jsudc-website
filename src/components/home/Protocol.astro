@@ -1,0 +1,102 @@
+---
+/* One protocol, both sides: a real `list` request of the live example and the
+   shape of its answer, with @jsudc/core between them. */
+import { Code } from "@astrojs/starlight/components";
+
+const request = `POST /udc/list
+{
+  "collection": "repos",
+  "filter": { "field": "language", "op": "eq", "value": "TypeScript" },
+  "sort": [{ "field": "stargazers_count", "dir": "desc" }],
+  "page": { "limit": 60 }
+}`;
+const answer = `{
+  "kind": "udc.list.ok",
+  "id": "",
+  "payload": { "rows": [ … ], "next_cursor": null, "total": 4 }
+}`;
+---
+
+<section class="protocol not-content" aria-labelledby="protocol">
+  <div class="copy">
+    <h2 id="protocol">One protocol, both sides</h2>
+    <p>
+      <code>@jsudc/core</code> is the contract: every request and every answer is an envelope checked
+      by the same Zod schemas. The server imports it to check what arrives; the client imports it to
+      check what comes back. Replace either side with your own and the other does not notice.
+    </p>
+    <p>
+      Every action is <code>POST /udc/&lt;action&gt;</code>: <code>describe</code>, <code>list</code>,
+      <code>read</code>, <code>mutate</code>, and the schema edits that add, change or retire a field
+      at runtime. The answer is always HTTP 200; its <code>kind</code> says ok or err.
+    </p>
+  </div>
+  <div class="wire">
+    <div class="side">
+      <p class="who"><b>@jsudc/react</b> asks</p>
+      <Code code={request} lang="json" frame="none" wrap />
+    </div>
+    <p class="core"><b>@jsudc/core</b> validates both directions with the same schemas</p>
+    <div class="side">
+      <p class="who"><b>@jsudc/server</b> answers</p>
+      <Code code={answer} lang="json" frame="none" wrap />
+    </div>
+  </div>
+</section>
+
+<style>
+  .protocol {
+    display: grid;
+    gap: 2rem 4rem;
+    margin-top: 6rem;
+  }
+  h2 {
+    font-size: clamp(1.6rem, 3vw, 2.125rem);
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    font-weight: 650;
+    color: var(--sl-color-white);
+  }
+  .copy p {
+    margin-top: 1rem;
+    color: var(--sl-color-gray-2);
+    max-width: 46ch;
+  }
+  .copy code {
+    font-size: 0.86em;
+  }
+  .wire {
+    border: 1px solid var(--jsudc-border-strong);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--jsudc-code-bg);
+  }
+  .who {
+    padding: 0.875rem 1.125rem 0;
+    font-size: 0.8125rem;
+    color: var(--sl-color-gray-3);
+  }
+  .who b,
+  .core b {
+    font: 600 0.8125rem var(--sl-font-mono);
+    color: var(--sl-color-white);
+  }
+  .core {
+    padding: 0.75rem 1.125rem;
+    background: var(--sl-color-accent-low);
+    font-size: 0.84rem;
+    color: var(--sl-color-gray-2);
+  }
+  .side :global(.expressive-code) {
+    --ec-codeBg: transparent;
+  }
+  .side :global(.expressive-code pre) {
+    border: 0;
+    font-size: 0.78rem;
+  }
+  @media (min-width: 64rem) {
+    .protocol {
+      grid-template-columns: 5fr 7fr;
+    }
+  }
+</style>

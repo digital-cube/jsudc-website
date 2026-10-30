@@ -1,0 +1,44 @@
+---
+/* The header's right side (Starlight's `SocialIcons` overridden): the site's
+   own links before the social icons. */
+import Default from "@astrojs/starlight/components/SocialIcons.astro";
+
+const links = [
+  { href: "/get-started/", text: "Get started" },
+  { href: "https://jsudc.igor.digitalcube.work", text: "Live example" },
+];
+const path = Astro.url.pathname;
+---
+
+<nav class="top" aria-label="Site">
+  {
+    links.map(({ href, text }) => (
+      <a {href} aria-current={path.startsWith(href) ? "page" : undefined}>
+        {text}
+      </a>
+    ))
+  }
+</nav>
+<Default />
+
+<style>
+  .top {
+    display: none;
+    gap: 1.5rem;
+    margin-inline-end: 0.75rem;
+    font-size: 0.9375rem;
+  }
+  .top a {
+    color: var(--sl-color-gray-2);
+    text-decoration: none;
+  }
+  .top a:hover,
+  .top a[aria-current="page"] {
+    color: var(--sl-color-white);
+  }
+  @media (min-width: 50rem) {
+    .top {
+      display: flex;
+    }
+  }
+</style>

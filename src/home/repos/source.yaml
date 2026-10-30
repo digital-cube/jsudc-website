@@ -1,0 +1,11 @@
+kind: http_api
+options:
+  base_url: https://api.github.com
+  list_endpoint: /users/digital-cube/repos
+  id_field: name
+  field_map:
+    owner_avatar: owner.avatar_url
+  cache_ttl_ms: 300000
+# or postgres_jsonb, memory, filesystem,
+# yaml_menu; with no source.yaml, a
+# Postgres table named like the directory

@@ -1,0 +1,210 @@
+---
+/*
+ * The renderer strip: the screenshots scripts/shots.mjs takes of the live
+ * example, one frame per renderer (and the schema editor), light or dark with
+ * the site's theme. The names above it are links to the frames; with JS they
+ * scroll the strip instead of the page.
+ */
+import { Image } from "astro:assets";
+
+const shots = import.meta.glob<{ default: ImageMetadata }>("../../assets/renderers/*.webp", {
+  eager: true,
+});
+const img = (name: string, theme: string) => {
+  const file = shots[`../../assets/renderers/${name}-${theme}.webp`];
+  if (!file) throw new Error(`no screenshot ${name}-${theme}.webp; run npm run shots`);
+  return file.default;
+};
+
+const frames = [
+  { name: "table", label: "Table", from: "companies", alt: "A table of companies with pinned columns, filter chips and a search box" },
+  { name: "cards", label: "Cards", from: "repos", alt: "GitHub repositories as cards with their language, stars and last push" },
+  { name: "kanban", label: "Kanban", from: "tickets", alt: "Tickets on a board in Ready, In progress, Backlog and Review columns" },
+  { name: "calendar", label: "Calendar", from: "appointments", alt: "A work-week calendar of clinic appointments" },
+  { name: "tree", label: "Tree", from: "org", alt: "An organisation chart as an expandable tree of departments and people" },
+  { name: "map", label: "Map", from: "flights", alt: "Live flights over the Balkans as plane markers on a map" },
+  { name: "chart", label: "Chart", from: "quakes", alt: "A bar chart of earthquake magnitudes over the last seven days" },
+  { name: "schema-editor", label: "Schema editor", from: "companies", alt: "The Add column dialog of the schema editor over the companies table" },
+];
+---
+
+<section class="strip-section not-content" aria-labelledby="renderers">
+  <div class="head">
+    <h2 id="renderers">Seven renderers and a schema editor, from one line of YAML</h2>
+    <p>
+      Real screenshots of the <a href="https://jsudc.igor.digitalcube.work">live example</a>. Each
+      view lists the renderers it offers in <code>available_renderers</code>; the data view draws one
+      tab per name.
+    </p>
+  </div>
+  <nav class="names" aria-label="Renderers">
+    {frames.map((f, i) => <a href={`#shot-${f.name}`} aria-current={i === 0 ? "true" : undefined}>{f.label}</a>)}
+  </nav>
+  <ol class="strip" data-strip>
+    {
+      frames.map((f, i) => (
+        <li id={`shot-${f.name}`} class="frame">
+          <figure>
+            <div class="shot">
+              {(["light", "dark"] as const).map((theme) => (
+                <Image
+                  src={img(f.name, theme)}
+                  alt={f.alt}
+                  widths={[640, 1280]}
+                  sizes="(min-width: 50rem) 640px, 86vw"
+                  loading={i < 2 ? "eager" : "lazy"}
+                  class={theme}
+                />
+              ))}
+            </div>
+            <figcaption>
+              <b>{f.label}</b>
+              <code>{f.from}/view.yaml</code>
+            </figcaption>
+          </figure>
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<script>
+  for (const section of document.querySelectorAll(".strip-section")) {
+    const strip = section.querySelector<HTMLElement>("[data-strip]");
+    const links = [...section.querySelectorAll<HTMLAnchorElement>(".names a")];
+    if (!strip) continue;
+    const select = (id: string) => {
+      for (const a of links) a.toggleAttribute("aria-current", a.hash === `#${id}`);
+    };
+    for (const a of links) {
+      a.addEventListener("click", (e) => {
+        const frame = strip.querySelector<HTMLElement>(a.hash);
+        if (!frame) return;
+        e.preventDefault();
+        const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        strip.scrollTo({ left: frame.offsetLeft - strip.offsetLeft, behavior: reduce ? "auto" : "smooth" });
+        select(frame.id);
+      });
+    }
+    // The name of the frame that sits at the strip's start follows a manual scroll.
+    const seen = new IntersectionObserver(
+      (entries) => {
+        const first = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.left - b.boundingClientRect.left)[0];
+        if (first) select(first.target.id);
+      },
+      { root: strip, threshold: 0.6 },
+    );
+    for (const li of strip.children) seen.observe(li);
+  }
+</script>
+
+<style>
+  .strip-section {
+    margin-top: 4.5rem;
+  }
+  .head {
+    display: grid;
+    gap: 0.75rem 3rem;
+    align-items: end;
+    margin-bottom: 1.25rem;
+  }
+  h2 {
+    font-size: clamp(1.6rem, 3vw, 2.125rem);
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    font-weight: 650;
+    max-width: 24ch;
+    color: var(--sl-color-white);
+  }
+  .head p {
+    color: var(--sl-color-gray-3);
+    font-size: 0.9375rem;
+    max-width: 46ch;
+  }
+  .head a {
+    color: var(--sl-color-text-accent);
+  }
+  .head code {
+    font-size: 0.86em;
+  }
+  .names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    width: fit-content;
+    padding: 0.25rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--jsudc-border);
+    border-radius: 10px;
+    background: var(--jsudc-surface);
+  }
+  .names a {
+    padding: 0.375rem 0.75rem;
+    border-radius: 7px;
+    font-size: 0.875rem;
+    font-weight: 550;
+    color: var(--sl-color-gray-3);
+    text-decoration: none;
+  }
+  .names a:hover {
+    color: var(--sl-color-white);
+  }
+  .names a[aria-current] {
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-white);
+  }
+  /* The strip bleeds to the right edge of the viewport. */
+  .strip {
+    display: flex;
+    gap: 1.25rem;
+    margin: 0 calc(50% - 50vw) 0 0;
+    padding: 0 1.5rem 1rem 0;
+    list-style: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: var(--jsudc-border-strong) transparent;
+  }
+  .frame {
+    flex: 0 0 min(86vw, 40rem);
+    scroll-snap-align: start;
+  }
+  figure {
+    margin: 0;
+  }
+  .shot {
+    border: 1px solid var(--jsudc-border-strong);
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 16 / 11;
+    background: var(--jsudc-surface);
+  }
+  .shot img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top left;
+  }
+  :global([data-theme="light"]) .shot img.dark,
+  :global(:root:not([data-theme="light"])) .shot img.light {
+    display: none;
+  }
+  figcaption {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--sl-color-white);
+  }
+  figcaption code {
+    font-size: 0.78rem;
+    color: var(--sl-color-gray-3);
+  }
+  @media (min-width: 60rem) {
+    .head {
+      grid-template-columns: 1fr auto;
+    }
+  }
+</style>
