@@ -1,0 +1,79 @@
+---
+title: Views and renderers
+description: view.yaml decides what the data view offers; seven renderers and a schema editor draw the same rows, filters and URL state.
+sidebar:
+  order: 6
+---
+
+import LiveExample from "../../../components/LiveExample.astro";
+
+A collection's `view.yaml` is its **view**: which renderers it offers, which one opens, and how
+each draws the rows. The data view (`UdcDataView` in `@jsudc/react`) draws one tab per name in
+`available_renderers`; every tab shows the same rows under the same search, chips, filter and
+sort, and the active tab is in the URL (`?tab=`).
+
+```yaml
+default_renderer: kanban
+available_renderers: [kanban, table, cards, calendar]
+kanban_options:
+  bucket_collection: buckets
+  bucket_filter_field: board_id
+  ticket_board_field: board_id
+  ticket_bucket_field: bucket_id
+  card: { title_field: title, priority_field: priority, due_field: due }
+calendar_options: { start_field: starts_at, end_field: ends_at, title_field: title }
+```
+
+## Seven renderers and a schema editor
+
+| Renderer   | Draws                                                                            | Reads                                                         | Example collection |
+| ---------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------ |
+| `table`    | a grid: pinned columns, inline edit, sort by header, infinite or paged           | [`columns`, `row_color`](/reference/renderers/table/)         | `companies`        |
+| `cards`    | a grid of cards: title, subtitle, image or avatar, meta fields, a metric         | [`card_options`](/reference/renderers/cards/)                 | `repos`            |
+| `kanban`   | a board: columns from another collection, drag and drop, quick add               | [`kanban_options`](/reference/renderers/kanban/)              | `tickets`          |
+| `calendar` | day, work week, week and month over a start and an end field, drag to move       | [`calendar_options`](/reference/renderers/calendar/)          | `appointments`     |
+| `tree`     | a parent / child hierarchy, expand and collapse, drag to reparent                | [`tree_options`](/reference/renderers/tree/)                  | `org`              |
+| `map`      | markers at a latitude and longitude, sized by a field, regions, trails           | [`map_options`](/reference/renderers/map/)                    | `flights`          |
+| `chart`    | line, area, bar or pie over a time or category axis, with time windows           | [`chart_options`](/reference/renderers/chart/)                | `quakes`           |
+
+The **schema editor** is the eighth view of a collection: not a tab, but the *Add column*,
+*Edit column* and *Delete column* dialogs of the table header, over the
+[schema revisions](/concepts/schema-revisions/) actions.
+
+A renderer that needs fields says so in its block: the map needs `lat_field` and `lng_field`, the
+kanban the fields of its columns and cards. The server validates the block at load against the
+schema, so `available_renderers: [map]` without `map_options` stops the server with the reason,
+and so does a block that names a field the schema does not have.
+
+## The keys every renderer shares
+
+- `search`: the fields the search box looks in;
+- `filters`: the chips above the view (`select`, `range`, `bool`);
+- `filterable`: the fields and operators of the filter builder;
+- `page_size_default`, `pagination` (`infinite` or `pages`);
+- `refresh_interval_ms`: poll the rows, for live data.
+
+Every key: [view.yaml reference](/reference/view-yaml/).
+
+## Registering renderers
+
+In React a host registers the renderers it shows, each from its own subpath, so a host without a
+map installs no Leaflet:
+
+```tsx
+import { createRendererRegistry } from "@jsudc/react";
+import { kanbanRenderer } from "@jsudc/react/kanban";
+import { tableRenderer } from "@jsudc/react/table";
+
+const renderers = createRendererRegistry(tableRenderer, kanbanRenderer);
+```
+
+A tab whose renderer is not registered is drawn disabled. A renderer of your own is one more
+definition (`{ name, component, icon, labelKey, … }`); a later definition of a name replaces an
+earlier one, so a host can swap the table for its own.
+
+<LiveExample
+  path="/udc/tickets?tab=kanban"
+  title="See it live: tickets"
+  description="One view.yaml, four tabs: the kanban, the table, the cards and the calendar of the same tickets."
+/>

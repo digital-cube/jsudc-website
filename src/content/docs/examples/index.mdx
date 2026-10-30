@@ -1,0 +1,56 @@
+---
+title: Examples
+description: The live example app, and one page per example route — the default kit, a brand restyle, and the phase 2 design systems.
+sidebar:
+  order: 0
+---
+
+import { LinkCard } from "@astrojs/starlight/components";
+import ExampleShot from "../../../components/ExampleShot.astro";
+import LiveExample from "../../../components/LiveExample.astro";
+
+The live example is [`jsudc-example`](https://github.com/digital-cube/jsudc-example): a Fastify
+server with thirteen collections over every source (Postgres, a directory, three HTTP APIs, a YAML
+menu) and a React app that is `UdcDataView` in a shell. Every renderer on this site's home page is
+a screenshot of it.
+
+Its `/examples` route shows the same companies view entered at different layers of
+`@jsudc/react` (see [Theming](/concepts/theming/)). Each one has a page here, with the host code it
+takes.
+
+<ExampleShot
+  name="examples-page"
+  alt="The example's Examples page: two cards, the default kit and a restyle by CSS variables, each linking to the companies table"
+/>
+
+<LinkCard
+  title="1. The default kit"
+  href="/examples/default-kit/"
+  description="UdcProvider with no kit, the shipped stylesheet and seven renderers registered from their subpaths."
+/>
+<LinkCard
+  title="2. A brand restyle"
+  href="/examples/brand-restyle/"
+  description="One stylesheet of CSS variables under [data-brand]; no component changes."
+/>
+<LinkCard
+  title="3. Material UI (phase 2)"
+  href="/examples/mui/"
+  description="The same view drawn with MUI components through @jsudc/ui-mui."
+/>
+<LinkCard
+  title="4. Ant Design (phase 2)"
+  href="/examples/antd/"
+  description="The same view drawn with Ant Design through @jsudc/ui-antd."
+/>
+<LinkCard
+  title="5. Headless (phase 2)"
+  href="/examples/headless/"
+  description="A table on plain HTML, built on @jsudc/react/headless alone."
+/>
+
+<LiveExample
+  path="/examples"
+  title="Open the live example"
+  description="Every collection, every renderer, both themes and both languages."
+/>

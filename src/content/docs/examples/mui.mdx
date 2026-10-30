@@ -1,0 +1,33 @@
+---
+title: Material UI (phase 2)
+description: Planned — the companies view drawn with MUI components through a UI kit, @jsudc/ui-mui.
+sidebar:
+  label: Material UI
+  order: 3
+  badge:
+    text: Phase 2
+    variant: note
+---
+
+:::note[Not built yet]
+This route is planned for phase 2 of jsudc and is not in the live example yet. The page says
+what it will show.
+:::
+
+The [UI kit layer](/concepts/theming/#2-the-ui-kit-your-own-components): `@jsudc/ui-mui`, a
+`UiKit` whose `Button`, `Input`, `Select`, `Dialog`, `DropdownMenu`, `Popover`, `Tooltip`,
+`Toast`, `Segmented` and `Spinner` are Material UI components. The host passes it to the provider
+and the same data view draws with MUI, theme and all:
+
+```tsx
+import { muiKit } from "@jsudc/ui-mui";
+
+<ThemeProvider theme={theme}>
+  <UdcProvider client={client} renderers={renderers} kit={muiKit}>
+    <UdcDataView collection="companies" />
+  </UdcProvider>
+</ThemeProvider>;
+```
+
+The example will get a route that shows the companies with it, next to the
+[default kit](/examples/default-kit/). Follow the [roadmap](/packages/#roadmap).

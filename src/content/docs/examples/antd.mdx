@@ -1,0 +1,31 @@
+---
+title: Ant Design (phase 2)
+description: Planned — the companies view drawn with Ant Design components through a UI kit, @jsudc/ui-antd.
+sidebar:
+  label: Ant Design
+  order: 4
+  badge:
+    text: Phase 2
+    variant: note
+---
+
+:::note[Not built yet]
+This route is planned for phase 2 of jsudc and is not in the live example yet. The page says
+what it will show.
+:::
+
+The [UI kit layer](/concepts/theming/#2-the-ui-kit-your-own-components) again, with Ant Design:
+`@jsudc/ui-antd` maps the kit's primitives to `antd` components, and `ConfigProvider` themes them:
+
+```tsx
+import { antdKit } from "@jsudc/ui-antd";
+
+<ConfigProvider theme={theme}>
+  <UdcProvider client={client} renderers={renderers} kit={antdKit}>
+    <UdcDataView collection="companies" />
+  </UdcProvider>
+</ConfigProvider>;
+```
+
+The example will get a route that shows the companies with it. Follow the
+[roadmap](/packages/#roadmap).

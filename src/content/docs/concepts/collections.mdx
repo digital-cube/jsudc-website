@@ -1,0 +1,106 @@
+---
+title: Collections
+description: A collection is a directory of three files — schema.json, view.yaml and source.yaml — and everything else follows from them.
+sidebar:
+  order: 1
+---
+
+import { FileTree } from "@astrojs/starlight/components";
+import LiveExample from "../../../components/LiveExample.astro";
+
+A **collection** is one kind of row and how it is shown: companies, tickets, earthquakes. On disk
+it is a directory named after it, under the server's collections directory:
+
+<FileTree>
+- collections/
+  - companies/
+    - schema.json the fields
+    - view.yaml how the data view shows them
+    - source.yaml where the rows live (optional)
+    - seed.json rows to start with (optional)
+    - README.md served as the collection's Doc tab (optional)
+</FileTree>
+
+The directory name is the collection name (`[a-z][a-z0-9_]*`). At start the server's
+`loadRegistry` reads every directory, validates the three files against the schemas of
+`@jsudc/core` and refuses to start on a mistake, so a typo in a field name is an error at boot,
+not an empty column later.
+
+## schema.json: the fields
+
+```json title="collections/companies/schema.json"
+{
+  "version": "v1",
+  "fields": {
+    "name": { "type": "string", "length": 200, "required": true, "index": true },
+    "city": { "type": "string", "length": 80, "index": true },
+    "employees": { "type": "integer", "min": 0, "index": true },
+    "founded": { "type": "date" },
+    "active": { "type": "bool", "index": true }
+  }
+}
+```
+
+Each field has a `type` (`string`, `text`, `integer`, `decimal`, `year`, `bool`, `date`,
+`datetime`, `json` are stored in phase 1; more parse) and optional constraints: `required`,
+`min` / `max`, `length`, `values` for an enum. `index: true` asks a Postgres source for an
+expression index, so sorting and filtering on the field stay fast. `field_order` may list the
+order the columns appear in; without it, the key order is used.
+
+For a Postgres collection this file is the **first revision**: from then on the schema lives in
+the database and changes through the protocol, see [Schema revisions](/concepts/schema-revisions/).
+Every key: [schema.json reference](/reference/schema-json/).
+
+## view.yaml: how it is shown
+
+```yaml title="collections/companies/view.yaml"
+default_renderer: table
+available_renderers: [table, cards, map]
+page_size_default: 50
+columns:
+  - { field: name, pin: left, editable: true, width: 320, transform: titlecase }
+  - { field: city, editable: true }
+  - { field: employees, render: number_format, align: right, editable: true }
+search:
+  fields: [name, city]
+filters:
+  - { field: active, kind: bool, label: Active }
+map_options: { lat_field: lat, lng_field: lng, popup_fields: [name, city] }
+```
+
+The view says which renderers the data view offers (one tab each), the columns of the table, the
+search box, the filter chips, and one options block per renderer that needs one. It is the same
+file for every client: the React data view reads it, a client of your own can too. See
+[Views and renderers](/concepts/views/) and the [view.yaml reference](/reference/view-yaml/).
+
+## source.yaml: where the rows live
+
+```yaml title="collections/quakes/source.yaml"
+kind: http_api
+options:
+  base_url: https://earthquake.usgs.gov
+  list_endpoint: /earthquakes/feed/v1.0/summary/4.5_month.geojson
+  list_unwrap: features
+  id_field: id
+  field_map:
+    mag: properties.mag
+    lat: geometry.coordinates[1]
+    lng: geometry.coordinates[0]
+```
+
+Without the file the collection is a Postgres table named like the directory. With it, the rows
+come from memory, a directory on disk, an HTTP API or a YAML file, and the collection looks the
+same to every client. See [Sources](/concepts/sources/).
+
+## What the client gets
+
+The client never reads the files. It asks the server `describe` and gets them parsed and merged:
+the active schema, the view with every default filled in, the source's capabilities (can it
+write? does it count?) and the filterable fields with their operators. Everything the data view
+draws comes from that one answer.
+
+<LiveExample
+  path="/udc/companies?tab=table"
+  title="See it live: companies"
+  description="The collection above, 200 rows in Postgres: the table, the cards and the map from one view.yaml."
+/>

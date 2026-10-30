@@ -16,16 +16,36 @@ npm run build      # dist/, fails on a broken internal link
 npm run preview    # serves dist/
 npm run check      # astro check
 npm run lint       # biome
+npm run gen        # the generated pages alone (dev, build and check run it first)
 ```
 
-## Renderer screenshots
+## Generated pages
 
-The home page's renderer strip is real screenshots of the live example
-(<https://jsudc.igor.digitalcube.work>), one per view, light and dark:
+Two sections are written at build time and are not in git (`.gitignore`):
+
+- **Reference** (`src/content/docs/reference/`): `scripts/gen-reference.mjs` imports the
+  installed `@jsudc/core` (pinned in `package.json`) and walks its exported Zod schemas: keys,
+  types, optional and default, the constraints `z.toJSONSchema` reports, the JSDoc the package
+  ships in `dist/*.js` above every schema and key, the messages of its refinements, and its
+  registries (`ACTIONS`, the `filter` builders, `filterableForType`, `RENDERER_NAMES`,
+  `SOURCE_KINDS`). Each page states the version it came from. To move the reference to a new
+  release, bump `@jsudc/core` and build; nothing is edited by hand.
+- **Changelogs and versions** (`src/content/docs/packages/changelogs/`,
+  `src/generated/packages.json`): `scripts/gen-packages.mjs` reads
+  `https://registry.npmjs.org/@jsudc%2F<name>` and each repository's `CHANGELOG.md` at the tag of
+  the version on npm. It needs the network; a registry or GitHub that does not answer fails the
+  build.
+
+## Screenshots
+
+The home page's renderer strip and the Examples pages are real screenshots of the live example
+(<https://jsudc.igor.digitalcube.work>), light and dark: one per view into
+`src/assets/renderers/`, one per example route into `src/assets/examples/`:
 
 ```sh
-npx playwright install chromium   # once
-npm run shots                     # writes src/assets/renderers/*.png
+npx playwright install chromium   # once (or SHOTS_CHANNEL=chrome for the installed Chrome)
+npm run shots                     # every shot
+npm run shots -- default-kit brand-restyle examples-page   # the Examples pages only
 SHOTS_BASE=http://localhost:5173 npm run shots   # against a local example
 ```
 

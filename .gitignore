@@ -6,3 +6,7 @@ dist/
 # scripts/shots.mjs writes here before it copies the keepers into src/assets
 .shots/
 .snippets/
+# written at build time by scripts/gen-reference.mjs and scripts/gen-packages.mjs (npm run gen)
+src/content/docs/reference/
+src/content/docs/packages/changelogs/
+src/generated/

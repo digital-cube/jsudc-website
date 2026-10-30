@@ -1,0 +1,52 @@
+---
+/*
+ * One screenshot of an example route, light or dark with the site's theme:
+ * src/assets/examples/<name>-<theme>.webp, written by `npm run shots`.
+ */
+import { Image } from "astro:assets";
+
+interface Props {
+  name: string;
+  alt: string;
+}
+
+const { name, alt } = Astro.props;
+const shots = import.meta.glob<{ default: ImageMetadata }>("../assets/examples/*.webp", { eager: true });
+const img = (theme: string) => {
+  const file = shots[`../assets/examples/${name}-${theme}.webp`];
+  if (!file) throw new Error(`no screenshot ${name}-${theme}.webp; run npm run shots -- ${name}`);
+  return file.default;
+};
+---
+
+<figure class="example-shot not-content">
+  {
+    (["light", "dark"] as const).map((theme) => (
+      <Image
+        class={theme}
+        src={img(theme)}
+        alt={alt}
+        widths={[640, 1280, 1920]}
+        sizes="(min-width: 72rem) 46rem, 100vw"
+        loading="lazy"
+      />
+    ))
+  }
+</figure>
+
+<style>
+  .example-shot {
+    margin-block: 1.5rem;
+  }
+  .example-shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--jsudc-border-strong);
+    border-radius: 12px;
+  }
+  :global([data-theme="light"]) .example-shot img.dark,
+  :global(:root:not([data-theme="light"])) .example-shot img.light {
+    display: none;
+  }
+</style>

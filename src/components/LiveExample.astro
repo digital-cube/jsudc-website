@@ -1,0 +1,20 @@
+---
+/*
+ * The "see it live" card a Concepts or Examples page ends with: a link into the
+ * live example (EXAMPLE_URL from src/site.mjs), so stage and production builds
+ * each point at their own.
+ */
+import { LinkCard } from "@astrojs/starlight/components";
+import { EXAMPLE_URL } from "../site.mjs";
+
+interface Props {
+  /** Path in the example, `/udc/<collection>?tab=<renderer>` or a page such as `/examples`. */
+  path: string;
+  title: string;
+  description: string;
+}
+
+const { path, title, description } = Astro.props;
+---
+
+<LinkCard title={title} href={`${EXAMPLE_URL}${path}`} description={description} />

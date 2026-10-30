@@ -1,0 +1,83 @@
+---
+/*
+ * The Packages page's version table: what scripts/gen-packages.mjs read from the
+ * npm registry when the site was built (src/generated/packages.json). Nothing here
+ * names a version.
+ */
+import data from "../generated/packages.json";
+
+const built = data.fetched_at.slice(0, 10);
+const licences = [...new Set(data.packages.map((p) => p.license ?? "unlicensed"))].join(", ");
+---
+
+<table class="pkg-table">
+  <thead>
+    <tr>
+      <th scope="col">Package</th>
+      <th scope="col">Latest</th>
+      <th scope="col">Released</th>
+      <th scope="col">Earlier</th>
+      <th scope="col">Links</th>
+    </tr>
+  </thead>
+  <tbody>
+    {
+      data.packages.map((p) => (
+        <tr>
+          <th scope="row">
+            <code>{p.name}</code>
+            <span class="desc">{p.description}</span>
+          </th>
+          <td>
+            <a href={`${p.npm}/v/${p.latest}`}>
+              <code>{p.latest}</code>
+            </a>
+          </td>
+          <td class="date">{p.date}</td>
+          <td>
+            {p.versions
+              .slice(1)
+              .map((v) => v.version)
+              .join(", ") || "—"}
+          </td>
+          <td class="links">
+            <a href={p.repository}>repository</a>
+            <a href={p.changelog}>changelog</a>
+            <a href={p.npm}>npm</a>
+          </td>
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+<p class="pkg-note">
+  Read from <a href="https://registry.npmjs.org/@jsudc%2Fcore">registry.npmjs.org</a> when this
+  site was built ({built}). Licence: {licences}.
+</p>
+
+<style>
+  .pkg-table th[scope="row"] {
+    min-width: 14rem;
+    font-weight: 400;
+  }
+  .pkg-table th[scope="row"] code {
+    font-weight: 600;
+  }
+  .desc {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+  .date {
+    white-space: nowrap;
+  }
+  .links a {
+    display: block;
+    white-space: nowrap;
+  }
+  .pkg-note {
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+</style>
