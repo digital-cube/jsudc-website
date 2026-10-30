@@ -154,12 +154,12 @@ const frames = [
     background: var(--sl-color-accent-low);
     color: var(--sl-color-white);
   }
-  /* The strip bleeds to the right edge of the viewport. */
+  /* The strip stays inside the content column, bounded right as on the left. */
   .strip {
     display: flex;
     gap: 1.25rem;
-    margin: 0 calc(50% - 50vw) 0 0;
-    padding: 0 1.5rem 1rem 0;
+    margin: 0;
+    padding: 0 0 1rem;
     list-style: none;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
