@@ -2,9 +2,10 @@
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
 import starlightLinksValidator from "starlight-links-validator";
+import { SITE_URL } from "./src/site.mjs";
 
 export default defineConfig({
-  site: "https://jsudc.dev",
+  site: SITE_URL,
   integrations: [
     starlight({
       title: "jsudc",
@@ -31,7 +32,8 @@ export default defineConfig({
       },
       customCss: ["@fontsource-variable/inter", "./src/styles/theme.css"],
       sidebar: [{ label: "Get started", items: [{ autogenerate: { directory: "get-started" } }] }],
-      plugins: [starlightLinksValidator()],
+      // "{EXAMPLE_URL}" is the hero's placeholder for the live example (src/components/Hero.astro)
+      plugins: [starlightLinksValidator({ exclude: ({ link }) => link === "{EXAMPLE_URL}" })],
       lastUpdated: false,
     }),
   ],

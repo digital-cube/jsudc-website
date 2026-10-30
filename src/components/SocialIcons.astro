@@ -2,10 +2,11 @@
 /* The header's right side (Starlight's `SocialIcons` overridden): the site's
    own links before the social icons. */
 import Default from "@astrojs/starlight/components/SocialIcons.astro";
+import { EXAMPLE_URL } from "../site.mjs";
 
 const links = [
   { href: "/get-started/", text: "Get started" },
-  { href: "https://jsudc.igor.digitalcube.work", text: "Live example" },
+  { href: EXAMPLE_URL, text: "Live example" },
 ];
 const path = Astro.url.pathname;
 ---

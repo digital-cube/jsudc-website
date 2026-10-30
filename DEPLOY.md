@@ -1,5 +1,8 @@
 # Deploying jsudc.dev
 
+Stage (<https://stage.jsudc.dev>) is served from the live example's VM by
+`deploy/stage.sh`; see _Deploy: stage_ in the README. This page is about production.
+
 Two workflows are ready and both are off: each runs only when the repository
 variable `DEPLOY_TARGET` names it. Until a host is chosen the site is
 `npm run build` + `npm run preview`.

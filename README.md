@@ -29,6 +29,26 @@ npm run shots                     # writes src/assets/renderers/*.png
 SHOTS_BASE=http://localhost:5173 npm run shots   # against a local example
 ```
 
+## Deploy: stage
+
+<https://stage.jsudc.dev> is static files served by nginx on the VM of the live
+example (igor.digitalcube.work; TLS ends at the edge in front of it). On that VM,
+from any copy of this repository:
+
+```sh
+deploy/stage.sh --install   # once: links deploy/nginx/stage.jsudc.dev.conf into sites-enabled, reloads nginx, deploys
+deploy/stage.sh             # every deploy: builds main (v1 until main exists) and swaps it in
+```
+
+It builds into `/home/digital/sites/stage.jsudc.dev/releases/<short sha>` with
+`SITE_URL=https://stage.jsudc.dev`, repoints the `current` symlink nginx serves,
+keeps the last three releases and fails unless the site answers 200. Re-running it
+with nothing new rebuilds nothing. `deploy/stage.sh --help` has the options.
+
+The build reads two variables (`src/site.mjs`): `SITE_URL`, the site's own origin
+(default `https://jsudc.dev`), and `EXAMPLE_URL`, where every live-example link
+points (default `https://jsudc.igor.digitalcube.work`).
+
 ## Licence
 
 MIT, see [LICENSE](LICENSE).

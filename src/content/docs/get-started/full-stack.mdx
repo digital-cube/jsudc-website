@@ -8,8 +8,9 @@ sidebar:
 import { Code, Steps } from "@astrojs/starlight/components";
 import fullStackServer from "../../../../snippets/full-stack/server.ts?raw";
 import seedTs from "../../../../snippets/full-stack/seed.ts?raw";
+import { EXAMPLE_URL } from "../../../site.mjs";
 
-The [live example](https://jsudc.igor.digitalcube.work) is a server and a React app over thirteen
+The <a href={EXAMPLE_URL}>live example</a> is a server and a React app over thirteen
 collections: companies, tickets, appointments and an org chart in Postgres, files from a
 directory, flights, earthquakes and GitHub repositories from the net, the menu from a YAML file.
 Run it, then do the same with a collection of your own.

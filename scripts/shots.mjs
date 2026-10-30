@@ -8,7 +8,7 @@
  * Re-run it whenever the example or the library's look changes; the site
  * imports the files, so a build after it picks them up.
  *
- * SHOTS_BASE   the example to shoot (default https://jsudc.igor.digitalcube.work)
+ * SHOTS_BASE   the example to shoot (default EXAMPLE_URL from src/site.mjs)
  * SHOTS_SCALE  device pixel ratio (default 2)
  * SHOTS_CHANNEL  a browser Playwright did not download, e.g. `chrome` for the
  *              installed Google Chrome (default: Playwright's own Chromium,
@@ -19,10 +19,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import sharp from "sharp";
+import { EXAMPLE_URL } from "../src/site.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = join(ROOT, "src", "assets", "renderers");
-const BASE = (process.env.SHOTS_BASE || "https://jsudc.igor.digitalcube.work").replace(/\/$/, "");
+const BASE = (process.env.SHOTS_BASE || EXAMPLE_URL).replace(/\/$/, "");
 const SCALE = Number(process.env.SHOTS_SCALE || 2);
 const VIEWPORT = { width: 1280, height: 800 };
 const THEMES = ["light", "dark"];
