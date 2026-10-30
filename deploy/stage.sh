@@ -2,7 +2,8 @@
 # Deploy https://stage.jsudc.dev on this VM, build-and-swap:
 #   clone or fetch digital-cube/jsudc-website into $ROOT/src -> check out main
 #   (v1 while main does not exist) -> npm ci -> npm run build with
-#   SITE_URL=https://stage.jsudc.dev -> dist/ to releases/<short sha> -> atomically
+#   SITE_URL=https://stage.jsudc.dev and EXAMPLE_URL=https://examples.stage.jsudc.dev
+#   -> dist/ to releases/<short sha> -> atomically
 #   repoint `current` -> keep the last three releases -> 200 through nginx.
 # Idempotent: when releases/<short sha> already holds that commit built for the
 # same SITE_URL and EXAMPLE_URL and `current` points at it, nothing is rebuilt or
@@ -22,7 +23,7 @@ CURRENT="$ROOT/current"
 REPO_URL=https://github.com/digital-cube/jsudc-website.git
 HOST=stage.jsudc.dev
 SITE_URL="https://$HOST"
-EXAMPLE_URL="${EXAMPLE_URL:-https://jsudc.igor.digitalcube.work}"
+EXAMPLE_URL="${EXAMPLE_URL:-https://examples.stage.jsudc.dev}"
 NODE_BIN=/home/digital/.nvm/versions/node/v24.19.0/bin
 VHOST_SRC="$SRC/deploy/nginx/$HOST.conf"
 VHOST_ENABLED="/etc/nginx/sites-enabled/$HOST"
@@ -44,8 +45,8 @@ then checks / through nginx on 127.0.0.1 and through the edge.
   --force          rebuild even when the release for this commit is already current
   -h, --help       this text
 
-EXAMPLE_URL (default https://jsudc.igor.digitalcube.work) is where the site's
-live-example links point.
+EXAMPLE_URL (default https://examples.stage.jsudc.dev, the stage example) is where
+the site's live-example links point.
 
 Exit codes: 0 deployed, 1 a step failed, 2 usage, 5 nginx on this VM does not
 answer 200, 6 this VM answers 200 but https://$HOST does not (the edge).

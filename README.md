@@ -39,7 +39,7 @@ Two sections are written at build time and are not in git (`.gitignore`):
 ## Screenshots
 
 The home page's renderer strip and the Examples pages are real screenshots of the live example
-(<https://jsudc.igor.digitalcube.work>), light and dark: one per view into
+(<https://examples.stage.jsudc.dev>), light and dark: one per view into
 `src/assets/renderers/`, one per example route into `src/assets/examples/`:
 
 ```sh
@@ -67,7 +67,8 @@ with nothing new rebuilds nothing. `deploy/stage.sh --help` has the options.
 
 The build reads two variables (`src/site.mjs`): `SITE_URL`, the site's own origin
 (default `https://jsudc.dev`), and `EXAMPLE_URL`, where every live-example link
-points (default `https://jsudc.igor.digitalcube.work`).
+points (default `https://examples.jsudc.dev`; `deploy/stage.sh` passes
+`https://examples.stage.jsudc.dev`).
 
 ## Licence
 
