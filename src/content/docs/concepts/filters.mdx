@@ -44,6 +44,10 @@ date the order ops and `between`, a bool only `eq`. `describe` answers the list 
 `capabilities.supported_filter_ops`. The tables per type are on the
 [Filter DSL reference](/reference/filter/).
 
+A [lookup](/concepts/lookups/) field is filtered by its key: `eq neq in not_in is_null is_not_null`
+on a `lookup`, and on a `lookup_array` `in` (any of its keys in the list), `not_in` (none) and the
+null tests. A condition on `id`, in a collection without an `id` field, means the row id.
+
 ## Builders
 
 `@jsudc/core` exports a builder per operator, which return exactly the JSON above:

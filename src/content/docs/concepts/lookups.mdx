@@ -1,0 +1,277 @@
+---
+title: Lookups and drill-down
+description: A lookup field stores the key of a row of another collection and shows that row's label; row_link turns a row into a link to another collection. New in 0.3.0.
+sidebar:
+  order: 7
+---
+
+import { Code } from "@astrojs/starlight/components";
+import ExampleShot from "../../../components/ExampleShot.astro";
+import LiveExample from "../../../components/LiveExample.astro";
+import assigneesTsx from "../../../../snippets/lookups/assignees.tsx?raw";
+import linksTsx from "../../../../snippets/lookups/links.tsx?raw";
+
+A ticket is on a board and in a column, and people work on it. Each of those is a row of another
+collection. A **lookup** field stores the key of that row and the data view shows the row's
+label: the board's name, the column's name, the people's names. A **`row_link`** goes the other
+way: a click on a board opens its tickets. Both are new in `@jsudc/*` 0.3.0.
+
+This is **level 1**: one hop, no JOIN. The server stores, sorts and filters the key; the client
+resolves the labels with one extra `list` per lookup field. Filtering by a field of the other
+collection (`board_id.name`) and `expand` are level 2, not built yet.
+
+## A lookup field
+
+A field of type `lookup` holds one key, `lookup_array` a list of keys. Its `lookup` block
+([`LookupDef`](/reference/schema-json/#lookupdef)) says where the key points. From the example's
+`tickets/schema.json`:
+
+```json
+"board_id": {
+  "type": "lookup",
+  "lookup": { "collection": "boards", "label_field": "name" },
+  "required": true,
+  "index": true
+},
+"bucket_id": {
+  "type": "lookup",
+  "lookup": { "collection": "buckets", "label_field": "name" },
+  "required": true,
+  "index": true
+},
+"assignees": {
+  "type": "lookup_array",
+  "lookup": { "collection": "org", "label_field": "name", "extra_fields": ["title"] }
+}
+```
+
+| Key            | Says                                                                                          |
+| -------------- | --------------------------------------------------------------------------------------------- |
+| `collection`   | the target collection                                                                         |
+| `label_field`  | the target's field shown in the cell, the chip and the combobox                               |
+| `key_field`    | the target's field the key matches; without it, the target's **row id** (`__meta.id`)       |
+| `extra_fields` | target fields fetched with the label, shown as the link's tooltip (here a person's job title) |
+
+A key is a string or an integer, and it travels as it is: a `lookup` value is `"b1"` or `7`, a
+`lookup_array` value is `["p3", "p9"]`. A `lookup` block on any other type is an error at load.
+
+**The flat udc-py form.** A dclabs / udc-py schema spells a lookup flat, with `ref` and
+`label_field` next to `type`. jsudc reads it and normalises it to the nested block, so such a file
+needs no edit and `describe` always answers the nested form. The example's
+`buckets/schema.json` keeps that spelling on purpose:
+
+```json
+"board_id": {
+  "type": "lookup",
+  "ref": "boards",
+  "label_field": "name",
+  "required": true,
+  "index": true
+}
+```
+
+A `ref` without `label_field` (a dc-lookups path such as `"Books.Genre"`) is left alone: it parses,
+and a jsudc server refuses to serve it. `relation` is not normalised; that name is kept for level
+2.
+
+## What the server does
+
+`@jsudc/server` adds no JOIN. For a lookup field it:
+
+- **stores the key** in the row's data as it came, a string or an integer;
+- **sorts by the key** as text, by code point (`"b-10"` before `"b-2"`); a `lookup` with
+  `index: true` gets an expression index, as a string does;
+- **filters on the key** with its own operators, and refuses any other as `unsupported_op`, in
+  every source. `describe` lists exactly these per field (`filterable.fields[].ops`):
+
+  | Type           | Operators                                         | Meaning of `in` / `not_in`          |
+  | -------------- | ------------------------------------------------- | ----------------------------------- |
+  | `lookup`       | `eq` `neq` `in` `not_in` `is_null` `is_not_null`  | the key is (not) in the list        |
+  | `lookup_array` | `in` `not_in` `is_null` `is_not_null`             | any key of the row is in the list / none is |
+
+  Keys compare as text, so `7` and `"7"` are the same key.
+
+**The row id in a filter.** A condition on `id`, in a collection whose schema has no live `id`
+field, means the row id. It takes the lookup operators above, in Postgres and in memory alike.
+That is how a lookup keyed by id resolves in one call, and what a lookup link opens:
+
+```json
+{ "field": "id", "op": "in", "value": ["b1", "b2", "b3"] }
+```
+
+Sorting by `id` is still refused: the id is already every sort's tiebreaker.
+
+**Checks at start.** Only the server sees both schemas, so it checks that they fit.
+`loadRegistry` checks every lookup field and every view's `row_link` against the served
+collections' `schema.json`, and `udcPlugin` (given `registry`) checks again against the active
+schemas, since a [revision](/concepts/schema-revisions/) may have dropped a field
+(`checkLinks: false` skips this). The target must be served and have `label_field`, `key_field`
+and every `extra_fields`; a collection the server does not serve counts as missing. Any problem
+stops the start, one line each:
+
+```text
+collections: lookups and row links do not fit
+tickets.board_id: lookup target boards has no field title
+boards.row_link: value_from colour is neither id nor a field of boards
+```
+
+**Schema edits.** `schema.add_field` accepts `lookup` and `lookup_array` (the flat form too) and
+checks the target against its active schema before it writes a revision; `schema.update_field`
+checks the same. A mismatch is a `validation_error`.
+
+## What React draws
+
+`@jsudc/react` resolves the labels on the client. Nothing in a host is lookup-specific beyond
+saying where links go ([below](#where-links-go)).
+
+<ExampleShot
+  name="lookups-table"
+  alt="The tickets table of the live example: the Assignees column shows people's names as chips, and the Board and Assignees filter chips sit above the table"
+/>
+
+- **The cell.** A `lookup` cell shows the target's `label_field` as a link to the target
+  collection filtered by that key, the bare key (muted) until the label arrives or when the
+  target has no such row, and `extra_fields` as the tooltip. A `lookup_array` is a row of such
+  chips. Cards, the kanban card's detail and the calendar's event detail draw the same cell. In
+  an `editable` cell a plain click stays in the cell (double-click edits) and Cmd / Ctrl-click
+  follows the link.
+- **One call per lookup field, not per cell.** The table and the kanban board collect the keys of
+  the rows on screen (`useLookupBatch`) and resolve them with one `list` per lookup field, `id in
+  [...]`, handed down through `<UdcLookupBatch>`. A page of 50 tickets costs three more calls:
+  `boards`, `buckets`, `org`.
+- **The chip.** A `select` chip over a lookup field lists the target's rows by label and filters
+  by key (`in`). The chip needs no `options` in `view.yaml`. Up to 50 target rows are listed as
+  they are; a larger target (`org`, here) gets a search box that asks the server (`contains` on
+  `label_field`). The URL keeps the keys (`?cf=`); the chip and the filter pill show labels.
+
+  ```yaml
+  filters:
+    # Lookup chips: the options are the target's rows by name, the filter is on the key.
+    - field: board_id
+      kind: select
+      label: Board
+    - field: assignees
+      kind: select
+      label: Assignee
+  ```
+
+  <ExampleShot
+    name="lookups-chip"
+    alt="The Board chip open over the tickets table, listing the three boards by name: Product roadmap, Release 3.0, Support desk"
+  />
+
+- **Inline edit.** An `editable` lookup column (`{field: assignees, editable: true}`) edits with a
+  combobox that searches the target. On a `lookup` a pick writes the key and "none" clears it; on a
+  `lookup_array` picks add and remove keys, Backspace removes the last, and Enter on an empty
+  search (or Tab, or leaving the editor) writes the list. Escape cancels. The stored key keeps its
+  type: a number stays a number.
+- **Fresh labels.** A write through `useUdcMutate` invalidates the lookups and the chip options of
+  the collection it wrote, so a renamed board shows its new name at once.
+
+### `useUdcLookup`
+
+The same resolution is a hook for a component of your own. `useUdcLookup(target, keys)` makes one
+`list` with an `in` filter over the key field, cached in TanStack Query under `["udc", "lookup",
+collection, sortedKeys]`, more than 1000 keys in several calls. `target` is a field's `lookup`
+block, or a collection name when the keys are row ids:
+
+<Code code={assigneesTsx} lang="tsx" title="Assignees.tsx" />
+
+`useUdcLookups` asks several at once, one query each; `LookupValue` is the cell itself, for a
+custom renderer.
+
+## Drill-down: `row_link`
+
+A view may say where a click on a row goes. From the example's `boards/view.yaml`:
+
+```yaml
+# Drill-down: a click on a board row opens its tickets (tickets where board_id = this board's id).
+row_link:
+  collection: tickets
+  filter: {field: board_id, value_from: id}
+```
+
+A click on a board opens `tickets` filtered by `board_id eq <that board's id>`. `value_from` names
+a field of this collection, or `id` for the row id (which is not among the fields);
+`filter.field` is a field of the linked collection. The server checks both ends at start
+([`RowLink`](/reference/view-yaml/#rowlink)).
+
+`row_link` needs no lookup field: any two collections that share a value can be linked, which
+covers the "summary row → its details" report. Here it is the inverse of `tickets.board_id`, so
+the filter pill on the tickets names the board, not its id.
+
+<ExampleShot
+  name="drilldown"
+  alt="After a click on the board Release 3.0: the tickets table filtered by the pill 'Board equals Release 3.0', showing 20 of 20 tickets"
+/>
+
+In the data view the rows of such a view have a pointer cursor. A click navigates; Cmd / Ctrl-click
+and the middle button open a new tab. A click in an editable cell, on a link or on a control stays
+where it is, so double-click still edits.
+
+### Where links go
+
+The library has no routes of its own, so a lookup link and a `row_link` need the host to say where
+a collection's view is mounted. Under react-router, `collectionPath` on `UdcReactRouterUrlState`
+(the example's whole lookup code is this one line); with any other router, `links` on
+`UdcProvider`:
+
+<Code code={linksTsx} lang="tsx" title="App.tsx" />
+
+Without either, links go to `/c/<collection>` and are followed with `history.pushState` and a
+`popstate` event (`defaultUdcLinks`).
+
+## A kanban board from lookups
+
+The example's tickets board is built from three lookups. Its columns are the rows of `buckets`
+whose `board_id` is the board on screen; a card sits in the column its `bucket_id` names; the
+board switcher lists `boards`; the avatars on a card are its `assignees`. From
+`tickets/view.yaml`:
+
+```yaml
+kanban_options:
+  # Columns: rows of `buckets` whose board_id is the board on screen, by order.
+  bucket_collection: buckets
+  bucket_filter_field: board_id
+  bucket_order_field: order
+  bucket_label_field: name
+  bucket_color_field: color
+  # Cards: rows of `tickets` on that board (board_id), in a column (bucket_id), by order.
+  ticket_board_field: board_id
+  ticket_bucket_field: bucket_id
+  ticket_order_field: order
+  card:
+    title_field: title
+    assignees_field: assignees
+```
+
+The kanban finds its board collection from the `lookup` of `ticket_board_field` (before 0.3.0 only
+a `relation`'s `ref` did). The avatars read the labels of `assignees_field` when it is a
+`lookup_array`, through the same batch as the table: one `list` of `org` for the board. Dragging a
+card to another column writes the column's key into `bucket_id`, as before.
+
+## Not in level 1
+
+- **Filtering by the target's fields.** A filter compares keys; "tickets of boards whose name
+  starts with R" is level 2 (`expand` and dotted paths, a lockstep release of its own).
+- **The schema editor** does not offer `lookup` / `lookup_array` yet; add one in `schema.json` or
+  through `schema.add_field`.
+- **The filter builder** has no lookup widget: a lookup condition there takes keys as text. The
+  chip is the way to filter by label.
+- **A target with a filter.** A lookup lists every row of its target; there is no way to say
+  "only the people, not the departments, of `org`".
+- **The kanban's board select does not follow a drill-down filter.** A `row_link` into
+  `tickets` opens the kanban on its default board; the Table and Cards tabs show the filtered rows.
+- Soft-deleting a field that another collection's lookup uses as `label_field` is not refused at
+  edit time; the next start reports it.
+
+<LiveExample
+  path="/udc/tickets?tab=table"
+  title="See it live: tickets"
+  description="Board, column and assignees by name, the Board and Assignee chips, double-click an Assignees cell to edit."
+/>
+<LiveExample
+  path="/udc/boards?tab=table"
+  title="See it live: boards"
+  description="Every row is a row_link: click a board to open its tickets."
+/>

@@ -84,6 +84,45 @@ const SHOTS = [
     path: "/udc/companies?tab=table&brand=acme",
   },
   { name: "examples-page", dir: "examples", window: true, path: "/examples?brand=default" },
+  // Lookups and drill-down (0.3.0): the tickets table with its lookup cells, the
+  // Board chip listing boards by name, and the boards table every row of which
+  // drills down into tickets.
+  {
+    name: "lookups-table",
+    dir: "examples",
+    window: true,
+    path: "/udc/tickets?tab=table&brand=default",
+    settle: 1500,
+  },
+  {
+    name: "lookups-chip",
+    dir: "examples",
+    window: true,
+    path: "/udc/tickets?tab=table&brand=default",
+    settle: 1500,
+    prepare: async (page) => {
+      await page.locator('[data-testid="chip-board_id"]').click();
+      await page.locator('[data-testid="chip-panel-board_id"] label').first().waitFor();
+    },
+  },
+  {
+    // A click on the board "Release 3.0" (its row_link), then the Table tab of
+    // where it lands: tickets filtered to that board, the pill naming it.
+    name: "drilldown",
+    dir: "examples",
+    window: true,
+    path: "/udc/boards?tab=table&brand=default",
+    settle: 1500,
+    prepare: async (page) => {
+      await page
+        .locator('[data-testid="row"]', { hasText: "Release 3.0" })
+        .locator('[data-testid="cell-key"]')
+        .click();
+      await page.waitForURL(/\/udc\/tickets/);
+      await page.locator('[data-testid="tab-table"]').click();
+      await page.locator('[data-testid="cell-board_id"] [data-resolved="true"]').first().waitFor();
+    },
+  },
 ];
 
 const only = process.argv.slice(2);
