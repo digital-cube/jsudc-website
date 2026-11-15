@@ -57,6 +57,8 @@ const PEERS = {
   "@dnd-kit/core": "^6",
   "@dnd-kit/sortable": "^10",
   "@dnd-kit/utilities": "^3",
+  // the router of the lookups page's links.tsx
+  "react-router": "^7",
   vite: "*",
   "@vitejs/plugin-react": "*",
   typescript: "^5.9",

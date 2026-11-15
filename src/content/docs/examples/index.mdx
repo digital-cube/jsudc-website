@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: The live example app, and one page per example route — the default kit, a brand restyle, and the phase 2 design systems.
+description: The live example app, one page per example route — the default kit, a brand restyle, the phase 2 design systems — and its lookups and drill-down.
 sidebar:
   order: 0
 ---
@@ -48,6 +48,31 @@ takes.
   href="/examples/headless/"
   description="A table on plain HTML, built on @jsudc/react/headless alone."
 />
+
+## Lookups and drill-down
+
+Since 0.3.0 the example's kanban collections are linked by [lookups](/concepts/lookups/): a ticket's
+`board_id` and `bucket_id` show the board's and the column's name, its `assignees` the people of
+`org` as chips, editable with a combobox, and the Board and Assignee chips list those rows by name.
+Its `boards` view has a `row_link`: a click on a board opens that board's tickets.
+
+<ExampleShot
+  name="drilldown"
+  alt="The live example after a click on the board Release 3.0: the tickets table filtered by 'Board equals Release 3.0', assignees shown by name"
+/>
+
+<LiveExample
+  path="/udc/tickets?tab=table"
+  title="Tickets: lookup cells, chips and the combobox"
+  description="Board, column and assignees by name; filter by Board or Assignee; double-click an Assignees cell to edit."
+/>
+<LiveExample
+  path="/udc/boards?tab=table"
+  title="Boards: drill down into tickets"
+  description="Each row is a row_link: a click opens the tickets of that board."
+/>
+
+## The whole example
 
 <LiveExample
   path="/examples"

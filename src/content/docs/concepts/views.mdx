@@ -51,7 +51,9 @@ and so does a block that names a field the schema does not have.
 - `filters`: the chips above the view (`select`, `range`, `bool`);
 - `filterable`: the fields and operators of the filter builder;
 - `page_size_default`, `pagination` (`infinite` or `pages`);
-- `refresh_interval_ms`: poll the rows, for live data.
+- `refresh_interval_ms`: poll the rows, for live data;
+- `row_link`: a click on a row opens another collection filtered by one of the row's values, see
+  [Lookups and drill-down](/concepts/lookups/#drill-down-row_link).
 
 Every key: [view.yaml reference](/reference/view-yaml/).
 

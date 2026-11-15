@@ -47,6 +47,10 @@ Each field has a `type` (`string`, `text`, `integer`, `decimal`, `year`, `bool`,
 expression index, so sorting and filtering on the field stay fast. `field_order` may list the
 order the columns appear in; without it, the key order is used.
 
+A `lookup` or `lookup_array` field holds the key of a row of another collection and names it in a
+`lookup` block (`{ "collection": "boards", "label_field": "name" }`); the data view shows that row's
+label. See [Lookups and drill-down](/concepts/lookups/).
+
 For a Postgres collection this file is the **first revision**: from then on the schema lives in
 the database and changes through the protocol, see [Schema revisions](/concepts/schema-revisions/).
 Every key: [schema.json reference](/reference/schema-json/).

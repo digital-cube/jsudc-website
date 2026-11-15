@@ -6,6 +6,9 @@ sidebar:
 ---
 
 import { LinkCard } from "@astrojs/starlight/components";
+import packages from "../../../generated/packages.json";
+
+export const latest = packages.packages[0].latest;
 
 UDC (Universal Data Collections) has two halves that speak one protocol. Start with the half
 you need: the other side can be anything that speaks it, and you can add our half later.
@@ -35,4 +38,5 @@ you need: the other side can be anything that speaks it, and you can add our hal
 
 Every code block on these pages is a file the site's build compiles against the published
 packages, and the server quick starts are started and asked for their rows, so what you copy
-works with the version on npm.
+works with the version on npm: <code>@jsudc/*@{latest}</code> when this site was built (see
+[Packages](/packages/)).
