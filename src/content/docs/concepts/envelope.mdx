@@ -1,6 +1,6 @@
 ---
 title: The envelope
-description: Every UDC request and answer is one message — kind, id, payload — over HTTP; eleven actions, three kinds each, six error codes.
+description: Every UDC request and answer is one message — kind, id, payload — over HTTP; twelve actions and the host's own, three kinds each, six error codes.
 sidebar:
   order: 3
 ---
@@ -45,9 +45,16 @@ neither side spells them.
 | [`reindex`](/reference/actions/reindex/)                        | renumber an order field when two neighbours left no room             |
 | [`tree.reparent`](/reference/actions/tree-reparent/)            | move a tree node and keep depth and ancestors consistent             |
 | [`source.read`](/reference/actions/source-read/)                | the file a file-backed collection is read from                       |
+| [`mutate_many`](/reference/actions/mutate_many/)                | update or delete many rows, by ids or by filter, in one request (new in 0.5.0, see [Selection and bulk actions](/concepts/selection/#mutate_many-on-the-wire)) |
 
 `ACTIONS` in `@jsudc/core` maps every name to its request and response schema, so the server
 dispatches generically and the client is typed per action.
+
+`list` takes an optional `search` from 0.5.0, the search box's text for a source that answers it
+itself ([Search answered by the source](/concepts/search/)). Next to the built-in actions a host
+serves [actions of its own](/concepts/host-actions/), defined once with `defineHostAction` and
+typed end to end. The [change feed](/concepts/live-updates/) is not an action: it is one
+long-lived `GET /udc/changes`, Server-Sent Events of `ChangeEvent`.
 
 ## Over HTTP
 

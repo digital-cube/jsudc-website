@@ -1,0 +1,75 @@
+---
+title: Host actions
+description: An action of the host's own, defined once with defineHostAction, registered on the dispatcher with the request context, and called typed from the client and from React with useUdcAction. New in 0.5.0.
+sidebar:
+  order: 13
+---
+
+import { Code } from "@astrojs/starlight/components";
+import actionsTs from "../../../../snippets/host-actions/actions.ts?raw";
+import browserTs from "../../../../snippets/host-actions/browser.ts?raw";
+import serverTs from "../../../../snippets/host-actions/server.ts?raw";
+import snoozeButtonTsx from "../../../../snippets/host-actions/snooze-button.tsx?raw";
+
+New in 0.5.0: a host serves actions of its own next to the [built-in
+ones](/concepts/envelope/#the-actions), typed end to end. The action is written **once**, its name
+and the Zod schemas of its request and response, in a module the server and the browser both
+import; the server registers a handler for it, and the client calls it with the payload and the
+answer typed from those schemas.
+
+## Define it once
+
+`defineHostAction({ name, request, response })` from `@jsudc/core` returns a `HostAction`. A
+built-in action name is refused.
+
+<Code code={actionsTs} lang="ts" title="shared/actions.ts" />
+
+## Register it with the context
+
+`dispatcher.register(action, handler)` on `@jsudc/server`'s dispatcher. The handler's payload is
+the request schema's output, its return value is typed by the response schema, and its second
+argument is the [request context](/concepts/request-context/): what the plugin's `context`
+answered for this request, so the handler knows the tenant and the user exactly as the built-in
+actions do.
+
+The dispatcher validates the payload first (a bad one is `validation_error`, and the handler is
+not called). The plugin serves the action at `POST /udc/<name>` and the OpenAPI document shows it
+with its request and response. A `UdcError` the handler throws is answered as it is; anything else
+is `internal` and logged.
+
+Worked example: archive a thread. The handler goes through the protocol itself, a
+[`mutate_many`](/concepts/selection/#mutate_many-on-the-wire) under the same context, so it can
+only ever archive the caller's own messages:
+
+<Code code={serverTs} lang="ts" title="server.ts" />
+
+`register(name, schema, handler)` stays for an action without a shared definition.
+
+## Call it, typed, from the client
+
+`UdcClient.call` takes the definition: the payload is checked by the compiler against the request
+schema, and the answer is parsed with the response schema (one that does not parse throws
+`UdcError` `internal`). For an action without a shared definition, a plain name with explicit
+types is the escape hatch; its answer is not checked.
+
+<Code code={browserTs} lang="ts" title="browser.ts" />
+
+`HostActionPayload`, `HostActionRequest`, `HostActionReply` and `HostActionResponse` name the four
+sides of an action's types.
+
+## `useUdcAction` in React
+
+`useUdcAction(action, options)` of `@jsudc/react` is a TanStack mutation over that typed `call`.
+`invalidates` names the collections whose lists to refetch after it succeeds; every other mutation
+option passes through. Given a name instead of a definition, you type it:
+`useUdcAction<Res, Req>("mail.flag")`.
+
+<Code code={snoozeButtonTsx} lang="tsx" title="SnoozeButton.tsx" />
+
+## From a view's actions
+
+A [bulk action](/concepts/selection/#running-an-action) or [row action](/concepts/row-actions/)
+with no handler in the browser, no `set` and not `delete` calls the server action its `action`
+key names (default its `kind`) with `{ collection, ids }`, or `{ collection, filter, except_ids }`
+for "all that match". Register a host action of that name and the view's button needs no code in
+the browser at all.

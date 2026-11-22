@@ -55,9 +55,18 @@ and so does a block that names a field the schema does not have.
 - `filters`: the chips above the view (`select`, `range`, `bool`);
 - `filterable`: the fields and operators of the filter builder;
 - `page_size_default`, `pagination` (`infinite` or `pages`);
-- `refresh_interval_ms`: poll the rows, for live data;
+- `refresh_interval_ms`: poll the rows, for live data (suspended while the
+  [change feed](/concepts/live-updates/) carries the collection);
 - `row_link`: a click on a row opens another collection filtered by one of the row's values, see
   [Lookups and drill-down](/concepts/lookups/#drill-down-row_link).
+
+- `multiselect`, `bulk_actions`: select rows and act on them, see
+  [Selection and bulk actions](/concepts/selection/);
+- `row_action_defs`, `row_actions`, `row_actions_display`: the actions of one row, see
+  [Row actions](/concepts/row-actions/).
+
+The table's infinite mode mounts only the rows near the viewport once many are loaded: see
+[Long lists](/concepts/long-lists/).
 
 Every key: [view.yaml reference](/reference/view-yaml/).
 
@@ -112,7 +121,9 @@ back.
 | Tab                 | the rows are one tab stop (roving `tabindex`): Tab reaches the active row, the next Tab leaves the list |
 
 The keys are left alone while an input, the search box, a cell editor, a menu, a list box or a
-dialog has the focus, and with Ctrl, Cmd, Alt or Shift held; Space is not bound. The table is
+dialog has the focus, and with Ctrl, Cmd, Alt or Shift held. Space is not bound unless the view
+selects: from 0.5.0 it then toggles the active row's [selection](/concepts/selection/), and the
+context-menu key, Shift+F10 or `.` open its [row actions](/concepts/row-actions/). The table is
 `role="grid"`, the card grid too, each row or card a `row`. Double-click and Enter still edit an
 editable cell when the focus is on the cell itself.
 

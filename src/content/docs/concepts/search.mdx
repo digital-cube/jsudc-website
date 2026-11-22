@@ -1,0 +1,104 @@
+---
+title: Search answered by the source
+description: capabilities.search "source" — the search box's text travels as search in list and the source matches and ranks it, from a tsvector on postgres_table or an external index; never wider than the caller's scope. New in 0.5.0.
+sidebar:
+  order: 15
+---
+
+import { Code } from "@astrojs/starlight/components";
+import clientTs from "../../../../snippets/search/client.ts?raw";
+import opensearchTs from "../../../../snippets/search/opensearch.ts?raw";
+import postgresTableTs from "../../../../snippets/search/postgres-table.ts?raw";
+import timelineTsx from "../../../../snippets/search/timeline.tsx?raw";
+
+By default the search box is answered in the browser's terms: its text becomes `contains`
+conditions over the view's `search.fields`, or-ed, and ANDed with the chips and the filter. New in
+0.5.0: a collection whose rows have a real full-text index (a `tsvector` in Postgres, OpenSearch
+beside the database) can answer the text itself, and rank the rows by relevance.
+
+## The capability
+
+The collection's `describe` says `capabilities.search: "source"`. The client then sends the text as
+**`search`** in `list` and composes nothing for it; the source matches it, and when the request
+has no `sort` it may return the rows by relevance. Absent, everything is as before 0.5.0.
+
+```json
+{ "collection": "message", "search": "invoice -draft", "filter": { "field": "folder", "op": "eq", "value": "inbox" },
+  "page": { "limit": 50 } }
+```
+
+**Never wider than the scope.** Whatever the source matches is ANDed with the caller's
+[row scope](/concepts/request-context/) and the client's filter, like any other condition: two
+tenants searching the same word each get only their own rows.
+
+**Refused, not ignored.** A collection without the capability answers a `search` with
+`unsupported_op` (`details.field: "search"`); it never ignores the text and lists every row.
+`sourceAnswersSearch(capabilities)` of `@jsudc/core` says which way to go:
+
+<Code code={clientTs} lang="ts" title="client.ts" />
+
+## On `postgres_table`: a `tsvector`
+
+The host's migration adds the index:
+
+```sql
+ALTER TABLE inbox.message ADD COLUMN tsv tsvector GENERATED ALWAYS AS (
+  setweight(to_tsvector('simple', coalesce(subject, '')), 'A') ||
+  setweight(to_tsvector('simple', coalesce(body_text, '')), 'B')) STORED;
+CREATE INDEX message_tsv ON inbox.message USING gin (tsv);
+```
+
+and the `search` option of [`PostgresTableSource`](/concepts/sources/#postgres_table) says, in
+SQL written in code, how a row matches and how relevant it is. `match(q, text)` is a condition and
+`rank(q, text)` (optional) a number, higher first. `q` is the text as a bound parameter: it is
+never spliced into the statement. With the option the source reports `search: "source"`.
+
+<Code code={postgresTableTs} lang="ts" title="server.ts" />
+
+A search with no `sort` comes by rank, ties by id, paged by offset (its `next_cursor` carries the
+next offset, so a client that walks by cursor walks a search too). With a `sort`, or without
+`rank`, the match is one more condition and the list is ordered and paged as usual. Roughly:
+
+```sql
+SELECT … WHERE tenant_id = $1 AND (tsv @@ websearch_to_tsquery('simple', $2))
+ORDER BY (ts_rank(tsv, websearch_to_tsquery('simple', $3))) DESC NULLS LAST, id ASC LIMIT 51 OFFSET 0
+```
+
+## An external index: `withSearchIndex`
+
+When the index lives outside the database (OpenSearch, Elasticsearch, a vector store), the host
+answers the text and jsudc does the rest. `withSearchIndex(source, { search })` wraps any source:
+the wrapper reports `search: "source"`, and a `list` with a `search` calls the host's
+`search(query)` for **one page of row ids in relevance order** (and a `total` when the index has
+one). jsudc then loads exactly those rows from the source, `id in ids` ANDed with the client's
+filter under the row scope, and returns them in the index's order.
+
+<Code code={opensearchTs} lang="ts" title="server.ts" />
+
+The query the host receives has `text`, `page: { limit, offset }`, `ctx` (what the plugin's
+`context` answered), `collection`, `rowScope`, and the client's `filter` and `sort` when present.
+An id the scope or the filter hides, or one deleted since it was indexed, is dropped, never fetched
+around: the page comes back shorter. A list without `search`, and every other method, is the
+wrapped source's own.
+
+## In React
+
+Nothing changes for a host: the capability comes from the server. Under it the data view sends the
+box's text as `search` (and it is part of the query key, so every text is its own cache entry); a
+blank box sends none. With a search and no sort chosen, no column shows a sort indicator, because
+the rows are in relevance order; clicking a header still sorts, and the sort is sent with the
+search. The debounce, `?q=` in the URL and the clear button are unchanged.
+
+Renderers that load their own rows (kanban, calendar, map, chart, tree) get the text as
+`listSearch` and pass it on. A renderer of your own does the same:
+
+<Code code={timelineTsx} lang="tsx" title="Timeline.tsx" />
+
+**Not covered.** `mutate_many` by filter takes no search text, so "all that match" cannot be
+selected while a source search is active (see
+[Selection](/concepts/selection/#all-that-match)); the loaded rows can still be selected.
+Highlights, facets and suggestions are not part of the protocol, and no OpenSearch client ships
+with jsudc.
+
+Every key: [`list`](/reference/actions/list/),
+[SearchCapability](/reference/envelope/#searchcapability).

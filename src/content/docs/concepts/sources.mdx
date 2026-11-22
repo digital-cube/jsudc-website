@@ -32,6 +32,17 @@ it supports. The data view reads it: a read-only source gets no inline edit and 
 an array-backed source pages by offset. Every key:
 [Capabilities](/reference/envelope/#capabilities).
 
+New in 0.5.0:
+
+- **`mutate_many`**: the collection changes or deletes many rows in one request. Every collection
+  that serves `mutate` serves it, in one transaction in both Postgres sources; see
+  [Selection and bulk actions](/concepts/selection/#mutate_many-on-the-wire).
+- **`search: "source"`**: the source answers the search box's text itself, from a `tsvector`
+  (`postgres_table`'s `search` option) or an external index (`withSearchIndex`); see
+  [Search answered by the source](/concepts/search/).
+- **`changes`**: the server pushes the collection's changes over the change feed; see
+  [Live updates](/concepts/live-updates/).
+
 ## postgres_jsonb
 
 One table per collection, every field inside a `data jsonb` column next to `id`, `version` and
@@ -122,6 +133,9 @@ CREATE TABLE attachment (id serial PRIMARY KEY, message_id uuid REFERENCES messa
   compiled into the `WHERE` of `list`, `read`, update and delete (outside → `not_found`); an insert
   gets the scope's `eq` values written over what the client sent; a written row that falls outside
   the scope or the base `where` is `forbidden` (`reason: "out_of_scope"`) and rolled back.
+- **`search`** (new in 0.5.0): `match(q)` and an optional `rank(q)`, SQL written in code over a
+  `tsvector`; the collection then answers the search box itself and orders a search by relevance.
+  See [Search answered by the source](/concepts/search/#on-postgres_table-a-tsvector).
 
 ### `onMutate`: a host's own write
 

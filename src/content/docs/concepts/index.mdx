@@ -1,6 +1,6 @@
 ---
 title: Concepts
-description: The ideas behind jsudc — collections, sources, the protocol, filters, schema revisions, views, lookups, request context and scope, sessions, embedding and theming.
+description: The ideas behind jsudc — collections, sources, the protocol, filters, schema revisions, views, lookups, request context and scope, sessions, embedding, selection and bulk actions, row actions, host actions, live updates, search answered by the source, long lists and theming.
 sidebar:
   order: 0
 ---
@@ -28,7 +28,7 @@ key of every file and message, generated from `@jsudc/core`.
 <LinkCard
   title="The envelope"
   href="/concepts/envelope/"
-  description="One message shape, eleven actions, request, ok and err kinds, closed error codes."
+  description="One message shape, twelve actions, request, ok and err kinds, closed error codes."
 />
 <LinkCard
   title="Filters"
@@ -64,6 +64,36 @@ key of every file and message, generated from `@jsudc/core`.
   title="Embedding a view"
   href="/concepts/embedding/"
   description="A data view as one pane of your screen: the host's filter, chrome, toolbar slots, URL state, RendererProps, the scoped stylesheet."
+/>
+<LinkCard
+  title="Selection and bulk actions"
+  href="/concepts/selection/"
+  description="multiselect and bulk_actions: select rows, the page or all that match, and run an action with one mutate_many."
+/>
+<LinkCard
+  title="Row actions"
+  href="/concepts/row-actions/"
+  description="row_action_defs, row_actions_display and when: icon buttons or a menu per row, only where they apply."
+/>
+<LinkCard
+  title="Host actions"
+  href="/concepts/host-actions/"
+  description="An action of your own, defined once, registered with the request context, called typed with useUdcAction."
+/>
+<LinkCard
+  title="Live updates"
+  href="/concepts/live-updates/"
+  description="The change feed: notify, who is told, a bus across processes, the provider switch, polling as the fallback."
+/>
+<LinkCard
+  title="Search answered by the source"
+  href="/concepts/search/"
+  description="capabilities.search: the text travels as search in list; a tsvector on postgres_table, or an external index."
+/>
+<LinkCard
+  title="Long lists"
+  href="/concepts/long-lists/"
+  description="The table's infinite mode mounts only the rows near the viewport: virtualize, threshold, overscan, limits."
 />
 <LinkCard
   title="Theming"
