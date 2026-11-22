@@ -87,4 +87,6 @@ a fourth book: a memory collection keeps it until the process ends.
 - The OpenAPI document of every action at `/docs`: drop `swagger: false` and install
   `@fastify/swagger @fastify/swagger-ui fastify-type-provider-zod`.
 - Draw the books: [a React data view](/get-started/react/) pointed at this server.
-- Keep them in Postgres: [the full stack](/get-started/full-stack/).
+- Keep them in Postgres: [the full stack](/get-started/full-stack/), or serve a table you already
+  have with [`postgres_table`](/concepts/sources/#postgres_table).
+- Serve many tenants and users from one collection: [request context and scope](/concepts/request-context/).

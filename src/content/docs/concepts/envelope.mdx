@@ -73,6 +73,21 @@ An error payload has a `code` from a closed set (`not_found`, `validation_error`
 optional `details`. `UdcError` is the matching exception on both sides. Every key:
 [Envelope and errors](/reference/envelope/).
 
+**Not signed in** is not a code of its own: it is `forbidden` with
+`details.reason: "unauthenticated"` (new in 0.4.0), so a client that predates it still parses the
+answer as plain `forbidden`. `unauthenticatedError()` of `@jsudc/core` builds it,
+`isUnauthenticated(err)` recognises it on a `UdcError` or a raw error payload, and
+`UNAUTHENTICATED_REASON` is the string:
+
+```json
+{ "kind": "udc.list.err", "id": "7", "payload": { "code": "forbidden", "message": "not signed in", "details": { "reason": "unauthenticated" } } }
+```
+
+A server sends it from its [request context](/concepts/request-context/#refusing-a-request);
+`UdcClient` throws the same error for an HTTP 401 in front of `/udc`, and `@jsudc/react` shows it
+as signed out ([Sessions and CSRF](/concepts/sessions/)). Another reason of `forbidden` is
+`out_of_scope`: an insert or update whose row would fall outside the host's row scope.
+
 <LiveExample
   path="/udc/companies?tab=table"
   title="See it live: companies"

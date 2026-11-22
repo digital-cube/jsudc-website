@@ -1,0 +1,127 @@
+---
+title: Request context and scope
+description: Tell jsudc who is asking, hold every request to rows the host decides, hide the scope's fields, guard schema edits and refuse an anonymous request. New in 0.4.0.
+sidebar:
+  order: 8
+---
+
+import { Code } from "@astrojs/starlight/components";
+import serverTs from "../../../../snippets/scope/server.ts?raw";
+
+A multi-tenant host serves one `message` collection to many tenants and many users, and each of
+them may see only their own rows. jsudc knows nothing of users, sessions or tenants. From
+`@jsudc/server` 0.4.0 the host answers two questions on every request, and jsudc enforces the
+answers on every action and every source:
+
+- **Who is asking?** The plugin option `context` turns the Fastify request into a value of the
+  host's own, `ctx`.
+- **Which rows may they reach?** The dispatcher option `rowScope` answers a filter for `ctx` on a
+  collection. No client can send it, see it or lift it.
+
+A third option, `access`, hides a collection from a `ctx` or lets it edit what every tenant
+shares. Without `context`, `rowScope` and `access`, nothing changes.
+
+## The three options
+
+| Option            | Where                                                    | Answers                                                                                                                                                          |
+| ----------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `context`         | `udcPlugin`                                              | `(request) => ctx`, sync or async: who is asking. Runs once per `POST /udc/:action` and once per file preview. Throw a `UdcError` to refuse the request          |
+| `rowScope`        | `createDispatcher`                                       | `(ctx, collection) => FilterNode \| undefined`: the [filter](/concepts/filters/) a request is held to on a collection; `undefined` is no limit                    |
+| `access`          | `createDispatcher`                                       | `(ctx, {action, collection}) => boolean \| undefined`: `false` hides the collection, `true` lets a scoped request run `schema.*` and `source.read` on it           |
+| `showScopeFields` | `createDispatcher`                                       | the collections whose scope fields stay visible; by default they are hidden from the client                                                                      |
+
+`ctx` travels everywhere: `Dispatcher.dispatch(msg, ctx?)` hands it to every handler, the host's
+own actions included (`dispatcher.register("whoami", schema, (payload, ctx) => …)`; a
+one-argument handler still works), and every `Source` method gets a trailing optional
+`SourceContext`, `{ctx, collection, rowScope?}`. A dispatcher driven without HTTP passes its own
+`ctx`.
+
+The option is called `rowScope`, not `scope`, so it cannot be confused with the `scope` of a
+[`reindex`](/reference/actions/reindex/) request (the kanban column to renumber).
+
+## Worked example: a `message` collection per tenant and user
+
+The tenant comes from the host name, the user from a session cookie; an anonymous request is
+refused. A message belongs to a tenant and a user, `audit_log` is for admins only, and only an
+admin may add a field to `message`:
+
+<Code code={serverTs} lang="ts" title="server.ts" />
+
+## What every action answers outside the scope
+
+A row outside the scope is answered as a row that does not exist: `not_found`, never `forbidden`,
+so a request cannot learn that another tenant's row is there.
+
+| Action                                                                   | Answer for a row of `message` outside the scope                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list`                                                                   | not there: the request runs `{and: [rowScope, clientFilter]}`; `total` counts in-scope rows; cursor and offset paging both. A lookup's labels (a `list` with `in` on ids) resolve to nothing                                                       |
+| `read`                                                                   | `not_found`, the same message and details as an id that does not exist                                                                                                                                                                              |
+| `mutate` update / delete                                                 | `not_found` as above, nothing written (with `expected_version` too: no `version_conflict` for it)                                                                                                                                                   |
+| `mutate` insert                                                          | every top-level `eq` of the scope (`tenant`, `owner`) is written into the row, over whatever the client sent; a patch naming such a field is overwritten the same way. A row that would still fall outside (a non-`eq` part) is `forbidden`, `details.reason: "out_of_scope"` |
+| `reindex`                                                                | the scope is ANDed with the request's own `scope`; only in-scope rows are renumbered                                                                                                                                                               |
+| `tree.reparent`                                                          | node or new parent outside → `not_found`                                                                                                                                                                                                            |
+| `GET /udc/files/blob`                                                    | 404, as for a missing file (the file's row is checked against the scope)                                                                                                                                                                            |
+| `schema.add_field` / `update_field` / `soft_delete_field`, `source.read` | they act for every tenant: on a collection with a scope for this `ctx`, `forbidden` unless `access` answers `true` for that action                                                                                                                |
+| a collection `access` answers `false` for                                | left out of `collections`, and every action on it is `not_found`, like an unknown collection (the file route: 404)                                                                                                                                 |
+
+The scope is enforced in one generic layer around every source (`ScopedCollection`), a source of
+the host's own included. `postgres_jsonb` and [`postgres_table`](/concepts/sources/#postgres_table)
+also compile it into their own SQL (`enforcesRowScope: true`), so the check and the write are one
+statement.
+
+## Hidden scope fields
+
+By default the fields a scope names (`tenant` and `owner` above) do not exist for the client.
+They are left out of `describe` (`schema.fields`, `field_order`, `view.columns`, `filterable`,
+`view.search.fields`, `view.filters`) and out of every row `list`, `read` and `mutate` answer. A
+client filter, sort, row value or `reindex` scope that names one is answered exactly as an
+unknown field, with `validation_error`.
+
+To show the owner column, list the collection in `showScopeFields: ["message"]`. The field is then
+visible, filterable and sortable, and a client filter on it is still ANDed with the scope: a
+filter on `tenant: "other"` simply matches nothing.
+
+## The access check: collections and schema edits
+
+A [schema edit](/concepts/schema-revisions/) changes a collection for every tenant, and
+`source.read` shows the file every tenant is served from. On a collection that has a scope for
+this `ctx`, these four actions (`TENANT_WIDE_ACTIONS`) are `forbidden` unless `access` answers
+`true` for them. `describe` and `collections` then report `schema_edit: false` and
+`source_yaml: false`, so the data view offers no *Add column*.
+
+`access` answering `false` hides a collection from that `ctx` altogether: it is not in
+`collections`, and every action on it answers `not_found`. `undefined` leaves the default.
+
+## Refusing a request
+
+A `UdcError` thrown by `context` refuses the request in the protocol: HTTP 200, the action's
+`.err` kind. "Not signed in" is not an error code of its own. It is `forbidden` with
+`details.reason: "unauthenticated"`, which `unauthenticatedError()` of `@jsudc/core` builds, so a
+0.3 client still parses it as plain `forbidden`:
+
+```json
+{
+  "kind": "udc.list.err",
+  "id": "",
+  "payload": {
+    "code": "forbidden",
+    "message": "not signed in",
+    "details": { "reason": "unauthenticated" }
+  }
+}
+```
+
+`isUnauthenticated(err)` recognises it on the client, and `@jsudc/react` shows it as signed out
+(see [Sessions and CSRF](/concepts/sessions/)). The file preview route, which is not an envelope,
+answers 401 for it and 403 for any other `UdcError`. Anything else `context` throws is answered
+`internal`, logged, and its message is not sent.
+
+## A source that knows the scope
+
+A source of the host's own needs nothing: the generic layer ANDs the scope into the `list`
+filter (and drops any row the source answers outside it), reads the row before `read`, `mutate`
+and `tree.reparent` to answer `not_found`, and checks the row an insert or update would write.
+That read-then-write is two steps. A source that can do better sets
+`readonly enforcesRowScope = true` and applies `sctx.rowScope` inside its own statements; the
+[SQL compiler](/concepts/sources/#a-source-of-your-own-over-sql) compiles it like any other
+filter. The `SourceContext` also carries `ctx`, for a source that forwards the user upstream.

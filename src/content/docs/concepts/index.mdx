@@ -1,6 +1,6 @@
 ---
 title: Concepts
-description: The ideas behind jsudc — collections, sources, the protocol, filters, schema revisions, views, lookups and theming.
+description: The ideas behind jsudc — collections, sources, the protocol, filters, schema revisions, views, lookups, request context and scope, sessions, embedding and theming.
 sidebar:
   order: 0
 ---
@@ -23,7 +23,7 @@ key of every file and message, generated from `@jsudc/core`.
 <LinkCard
   title="Sources"
   href="/concepts/sources/"
-  description="Where the rows live: Postgres jsonb, memory, a directory, an HTTP API or a YAML menu."
+  description="Where the rows live: Postgres jsonb, a relational table, memory, a directory, an HTTP API or a YAML menu."
 />
 <LinkCard
   title="The envelope"
@@ -43,12 +43,27 @@ key of every file and message, generated from `@jsudc/core`.
 <LinkCard
   title="Views and renderers"
   href="/concepts/views/"
-  description="view.yaml picks the renderers; seven renderers and a schema editor draw the same rows."
+  description="view.yaml picks the renderers; seven renderers and a schema editor draw the same rows; row activation and custom cells."
 />
 <LinkCard
   title="Lookups and drill-down"
   href="/concepts/lookups/"
   description="A field that stores the key of another collection's row and shows its label; row_link from a row to its details."
+/>
+<LinkCard
+  title="Request context and scope"
+  href="/concepts/request-context/"
+  description="Who is asking, the rows a host holds each request to, hidden scope fields, the access check, refusing an anonymous request."
+/>
+<LinkCard
+  title="Sessions and CSRF"
+  href="/concepts/sessions/"
+  description="A cookie session and a CSRF header through UdcClient; a 401 and the server's refusal shown as signed out."
+/>
+<LinkCard
+  title="Embedding a view"
+  href="/concepts/embedding/"
+  description="A data view as one pane of your screen: the host's filter, chrome, toolbar slots, URL state, RendererProps, the scoped stylesheet."
 />
 <LinkCard
   title="Theming"

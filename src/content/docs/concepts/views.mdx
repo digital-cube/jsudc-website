@@ -5,7 +5,11 @@ sidebar:
   order: 6
 ---
 
+import { Code } from "@astrojs/starlight/components";
 import LiveExample from "../../../components/LiveExample.astro";
+import activationRendererTsx from "../../../../snippets/views/activation-renderer.tsx?raw";
+import cellsTsx from "../../../../snippets/views/cells.tsx?raw";
+import mailboxTsx from "../../../../snippets/views/mailbox.tsx?raw";
 
 A collection's `view.yaml` is its **view**: which renderers it offers, which one opens, and how
 each draws the rows. The data view (`UdcDataView` in `@jsudc/react`) draws one tab per name in
@@ -73,6 +77,105 @@ const renderers = createRendererRegistry(tableRenderer, kanbanRenderer);
 A tab whose renderer is not registered is drawn disabled. A renderer of your own is one more
 definition (`{ name, component, icon, labelKey, … }`); a later definition of a name replaces an
 earlier one, so a host can swap the table for its own.
+
+A renderer of your own receives `RendererProps`, a public contract from 0.4.0: see
+[Embedding a view](/concepts/embedding/#a-renderer-of-the-hosts-the-rendererprops-contract).
+
+## Row activation and the keyboard
+
+New in 0.4.0: a row can do something of the host's, such as opening a message in a reading pane.
+`UdcDataView` takes three props, all optional. Passing any of them turns activation on; without
+them the rows are what they were (no tab stop, no keys, no active row, a `row_link` still
+followed on click).
+
+| Prop                     | What it does                                                                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `onRowActivate(row)`     | called on Enter on a row and on a plain click of it (the main button, no modifier, not on a link, button or input in it)                         |
+| `activeRowId`            | the row drawn as active. Passed: controlled (`null` for none), the host moves it in `onActiveRowChange`. Left out: the view keeps it itself (across tab switches too) |
+| `onActiveRowChange(row)` | the active row changed by the user: moved by the keys (no Enter needed), or a click on another row. Preview on move here                         |
+
+**The active row** has `aria-selected="true"`, the attribute `data-active="true"`
+(`.udc-row[data-active]`, `.udc-card[data-active]` for your CSS) and the `--selected` background.
+It and the focus follow the row's id across a refetch, a sort and pages loading in infinite mode;
+it is scrolled into view, also when the host sets `activeRowId`. A row that left the list
+(deleted, filtered out) stops being active without an error, and is active again when it comes
+back.
+
+**The keyboard**, in the table and the cards, while the focus is on a row:
+
+| Key                 | Does                                                                                     |
+| ------------------- | ---------------------------------------------------------------------------------------- |
+| ArrowDown / `j`     | the next row becomes active and takes the focus; on the last loaded row in infinite mode, the next page loads and its first row becomes active |
+| ArrowUp / `k`       | the previous row                                                                         |
+| Home / End          | the first / last loaded row                                                              |
+| Enter               | activates the row (`onRowActivate`)                                                      |
+| Tab                 | the rows are one tab stop (roving `tabindex`): Tab reaches the active row, the next Tab leaves the list |
+
+The keys are left alone while an input, the search box, a cell editor, a menu, a list box or a
+dialog has the focus, and with Ctrl, Cmd, Alt or Shift held; Space is not bound. The table is
+`role="grid"`, the card grid too, each row or card a `row`. Double-click and Enter still edit an
+editable cell when the focus is on the cell itself.
+
+**`row_link`.** Without `onRowActivate` a click follows the view's
+[`row_link`](/concepts/lookups/#drill-down-row_link) as before. With it a plain click activates
+the row, and Cmd / Ctrl-click and the middle button still open the link.
+
+A list and a reading pane side by side, the pane following the keyboard: the arrows preview,
+Enter or a click opens (and marks the message read):
+
+<Code code={mailboxTsx} lang="tsx" title="Mailbox.tsx" />
+
+Leave `activeRowId` out and the view keeps the active row itself; pass only `onRowActivate` when
+moving should not open anything.
+
+**In a renderer of your own**, `UdcDataView` hands it the same three props, and
+`useRowActivation` of `@jsudc/react/headless` gives it the table's behaviour: spread
+`rowProps(row)` on each row's element (ref, `tabIndex`, `aria-selected`, `data-active`, the key and
+focus handlers) and call `handleClick(e, row)` from its `onClick`. `nav.move("next")` and
+`nav.activate(row)` drive it from the host's own buttons.
+
+<Code code={activationRendererTsx} lang="tsx" title="message-list.tsx" />
+
+## Custom cells
+
+New in 0.4.0: a column of the table can be drawn by a component of the host's. Register cell
+components by name, the way renderers are registered, and name one in the column's `render`:
+
+```yaml
+view:
+  columns:
+    - field: from
+      render: sender # the host's component
+      render_options: { avatar: true }
+    - field: label
+      render: badge # built in, unless the host registered "badge"
+```
+
+`render: "<name>"` resolves from the host's registry first, then from the built-in kinds (`bool`,
+`badge`, `sparkline`, `heading_glyph`, `icon`, `date`, `datetime`, `number_format`, `bytes`,
+`text`); a name nobody registered behaves as before. Registering a built-in name replaces that
+kind for every column that names it in `render`. The cards draw their meta fields through the
+same registry; the kanban, the calendar, the map and the chart keep the built-in kinds.
+
+A cell component receives `CellProps`, a public contract like `RendererProps`:
+
+| Prop                   | Type                    | What it is                                                                                |
+| ---------------------- | ----------------------- | ----------------------------------------------------------------------------------------- |
+| `value`                | `unknown`               | `row[column.field]` as the server sent it; blank values too (draw your own empty)         |
+| `row`                  | `Row`                   | the whole row, `__meta` (id, version) included                                            |
+| `column`               | `ColumnConfig`          | the column from `view.columns[]` (or the card's meta field): `render_options`, `align`, … |
+| `def`                  | `FieldDef \| undefined` | the field's definition in the schema                                                      |
+| `collection`           | `string`                | the collection's name                                                                     |
+| `locale`, `intlLocale` | `string`                | the UI's language and its `Intl` locale                                                   |
+| `editable`             | `boolean`               | the cell edits on double-click (the inline editor draws over your component)              |
+| `surface`              | `"table" \| "card"`     | a table cell or a card's meta field                                                       |
+
+<Code code={cellsTsx} lang="tsx" title="cells.tsx" />
+
+`createCellRegistry` takes `{ name, component }` definitions, a later one replacing an earlier
+name; a plain `{ sender: SenderCell }` object is a registry too. `UdcCellsProvider` sets one
+anywhere in the tree (nested providers add up, the inner names winning), `useCellRegistry()`
+reads the one in effect, and `UdcDataView cells` adds to the provider's, its names winning.
 
 <LiveExample
   path="/udc/tickets?tab=kanban"

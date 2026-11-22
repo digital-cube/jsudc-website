@@ -12,9 +12,19 @@ together: a client and a server speak the same protocol when their minor version
 
 <PackageTable />
 
-0.3.0 adds [lookups and drill-down](/concepts/lookups/) to all three: `lookup` / `lookup_array`
+0.4.0 is what a multi-tenant host needs. `@jsudc/core` adds "not signed in" to the protocol
+(`forbidden`, `reason: "unauthenticated"`), a client for cookie sessions and CSRF, and the
+`postgres_table` source kind. `@jsudc/server` adds the
+[request context and row scope](/concepts/request-context/), the
+[`postgres_table` source](/concepts/sources/#postgres_table) with writes and `onMutate`, and the
+exported SQL compiler. `@jsudc/react` adds [sessions](/concepts/sessions/),
+[embedding a view](/concepts/embedding/) with a scoped stylesheet, and
+[row activation and custom cells](/concepts/views/#row-activation-and-the-keyboard). Both
+`@jsudc/server` and `@jsudc/react` 0.4.0 need `@jsudc/core` 0.4.0.
+
+0.3.0 added [lookups and drill-down](/concepts/lookups/) to all three: `lookup` / `lookup_array`
 fields and `row_link` in `@jsudc/core`, their filters and start-up checks in `@jsudc/server`, and
-labels, chips, the combobox and `useUdcLookup` in `@jsudc/react`. A 0.3 client needs a 0.3 server.
+labels, chips, the combobox and `useUdcLookup` in `@jsudc/react`.
 
 ## Which ones you install
 

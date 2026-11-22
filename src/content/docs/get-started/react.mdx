@@ -65,3 +65,14 @@ renderer you did not register shows the others.
 own Tailwind or CSS. Its colours and fonts are CSS variables (`--primary`, `--background`,
 `--border`, …, with a `.dark` set): redefine them in your stylesheet, after the library's, to
 make the data view yours.
+
+## In your own app
+
+- **A view inside your own pages**, next to your own navigation and CSS: import
+  `@jsudc/react/styles.scoped.css` instead, and see [Embedding a view](/concepts/embedding/) for
+  the host's filter, a frame-less view and URL state under a prefix.
+- **Signed-in users**: a cookie session and a CSRF header go through `UdcClient`'s `headers` and
+  `credentials`, and `createUdcQueryClient({ onUnauthenticated })` sends a signed-out user to your
+  login: [Sessions and CSRF](/concepts/sessions/).
+- **Open a row in your own pane** with `onRowActivate`, and move through the rows with the
+  keyboard: [Row activation](/concepts/views/#row-activation-and-the-keyboard).
