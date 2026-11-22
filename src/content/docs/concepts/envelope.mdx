@@ -1,6 +1,6 @@
 ---
 title: The envelope
-description: Every UDC request and answer is one message — kind, id, payload — over HTTP; eleven actions, three kinds each, six error codes.
+description: Every UDC request and answer is one message — kind, id, payload — over HTTP; twelve actions and the host's own, three kinds each, six error codes.
 sidebar:
   order: 3
 ---
@@ -45,9 +45,16 @@ neither side spells them.
 | [`reindex`](/reference/actions/reindex/)                        | renumber an order field when two neighbours left no room             |
 | [`tree.reparent`](/reference/actions/tree-reparent/)            | move a tree node and keep depth and ancestors consistent             |
 | [`source.read`](/reference/actions/source-read/)                | the file a file-backed collection is read from                       |
+| [`mutate_many`](/reference/actions/mutate_many/)                | update or delete many rows, by ids or by filter, in one request (new in 0.5.0, see [Selection and bulk actions](/concepts/selection/#mutate_many-on-the-wire)) |
 
 `ACTIONS` in `@jsudc/core` maps every name to its request and response schema, so the server
 dispatches generically and the client is typed per action.
+
+`list` takes an optional `search` from 0.5.0, the search box's text for a source that answers it
+itself ([Search answered by the source](/concepts/search/)). Next to the built-in actions a host
+serves [actions of its own](/concepts/host-actions/), defined once with `defineHostAction` and
+typed end to end. The [change feed](/concepts/live-updates/) is not an action: it is one
+long-lived `GET /udc/changes`, Server-Sent Events of `ChangeEvent`.
 
 ## Over HTTP
 
@@ -72,6 +79,21 @@ An error payload has a `code` from a closed set (`not_found`, `validation_error`
 `version_conflict`, `forbidden`, `unsupported_op`, `internal`), a `message` for people and
 optional `details`. `UdcError` is the matching exception on both sides. Every key:
 [Envelope and errors](/reference/envelope/).
+
+**Not signed in** is not a code of its own: it is `forbidden` with
+`details.reason: "unauthenticated"` (new in 0.4.0), so a client that predates it still parses the
+answer as plain `forbidden`. `unauthenticatedError()` of `@jsudc/core` builds it,
+`isUnauthenticated(err)` recognises it on a `UdcError` or a raw error payload, and
+`UNAUTHENTICATED_REASON` is the string:
+
+```json
+{ "kind": "udc.list.err", "id": "7", "payload": { "code": "forbidden", "message": "not signed in", "details": { "reason": "unauthenticated" } } }
+```
+
+A server sends it from its [request context](/concepts/request-context/#refusing-a-request);
+`UdcClient` throws the same error for an HTTP 401 in front of `/udc`, and `@jsudc/react` shows it
+as signed out ([Sessions and CSRF](/concepts/sessions/)). Another reason of `forbidden` is
+`out_of_scope`: an insert or update whose row would fall outside the host's row scope.
 
 <LiveExample
   path="/udc/companies?tab=table"

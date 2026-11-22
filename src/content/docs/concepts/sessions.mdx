@@ -1,0 +1,72 @@
+---
+title: Sessions and CSRF
+description: A cookie session and a CSRF header through UdcClient, and how a 401, a 403 and the server's "not signed in" reach the UI as signed out. New in 0.4.0.
+sidebar:
+  order: 9
+---
+
+import { Code } from "@astrojs/starlight/components";
+import mainTsx from "../../../../snippets/sessions/main.tsx?raw";
+import scriptTs from "../../../../snippets/sessions/script.ts?raw";
+
+A host with signed-in users keeps its session as it always has: a cookie, a CSRF token, a login
+page. jsudc has no login of its own. From 0.4.0 the client carries the session, and every way of
+saying "not signed in" becomes one error the UI shows as signed out:
+
+- **`@jsudc/core`**: `UdcClient` reads `headers` per call and passes `credentials` to `fetch`; an
+  HTTP 401 / 403 in front of `/udc` is a `UdcError`, and `isUnauthenticated(err)` recognises "not
+  signed in" however it arrived.
+- **`@jsudc/react`**: `createUdcQueryClient({ onUnauthenticated })` is the one place to send the
+  user to the login, and every view's error state says "You are signed out".
+- **`@jsudc/server`**: the plugin's `context` refuses an anonymous request in the protocol (see
+  [Request context and scope](/concepts/request-context/#refusing-a-request)).
+
+## The client: headers per call and credentials
+
+`UdcClient({ httpUrl, headers?, credentials?, fetch? })`:
+
+- **`headers`** is a fixed object or a function (`UdcHeaders`, possibly async) the client calls
+  before every request. A CSRF token that changes with the session needs no new client.
+- **`credentials`** (`RequestCredentials`) is passed to `fetch` as it is when given. Leave it out
+  on the same origin; use `"include"` to send a cookie session to another origin.
+
+## Worked example: a cookie session with a CSRF header
+
+Django-style: the session cookie travels by itself, the CSRF token is a cookie the page reads and
+echoes in a header, and a refused request sends the user to the login and back:
+
+<Code code={mainTsx} lang="tsx" title="main.tsx" />
+
+## How "not signed in" reaches the UI
+
+Three answers mean the same thing, and the client turns them into one error:
+
+| What happened                                                                  | `UdcClient` throws                                                                       | `isUnauthenticated` | React                                                       |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------- | ----------------------------------------------------------- |
+| the server's `context` refused the request in the protocol (HTTP 200, `.err`) | `forbidden`, `details: { reason: "unauthenticated" }`                                    | `true`              | signed out, `onUnauthenticated` called                      |
+| HTTP 401 from whatever stands in front of `/udc` (auth middleware, a gateway) | `forbidden`, `details: { reason: "unauthenticated", http_status: 401 }`                  | `true`              | signed out, `onUnauthenticated` called                      |
+| HTTP 403 in front of `/udc`                                                    | `forbidden`, `details: { http_status: 403 }`                                             | `false`             | the generic failure, `onUnauthenticated` not called         |
+| any other non-200                                                              | a plain `Error` (`udc.<action>: HTTP <status>`), a transport failure                     | `false`             | retried, then the failure with Retry, as before             |
+
+A `UdcError` is a refusal, not a transport failure, so nothing retries it. That is the one change
+an unchanged 0.3 host can see: a 401 or a 403 used to be a plain `Error`, retried twice and then
+shown as a transport failure with Retry; now it shows at once.
+
+**`onUnauthenticated(error)`** is called when a query or a mutation fails with
+`isUnauthenticated`, once per burst: the failures that arrive together (every query of a page)
+make one call, and the next one comes only after `unauthenticatedQuietMs` (default 2000)
+without such a failure. `createUdcQueryClient()` without arguments works as before.
+
+**The error state** of every view says "You are signed out", without Retry, for an
+unauthenticated error. Its strings are `APP.SIGNED_OUT_TITLE` and `APP.SIGNED_OUT_BODY`, in `en`
+and `sr`, overridable through `UdcI18nProvider` like every other term.
+
+Login screens, token refresh and storing the session stay the host's.
+
+## Without React
+
+The same check works in any client, a script or another framework:
+
+<Code code={scriptTs} lang="ts" title="script.ts" />
+
+The wire form of the refusal, and the codes it belongs to: [The envelope](/concepts/envelope/#errors).

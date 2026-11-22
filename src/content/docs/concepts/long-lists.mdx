@@ -1,0 +1,74 @@
+---
+title: Long lists
+description: The table's infinite mode mounts only the rows in and near its viewport, however many pages are loaded — the virtualize prop, its threshold and overscan, and what it does not do. New in 0.5.0.
+sidebar:
+  order: 16
+---
+
+import { Code } from "@astrojs/starlight/components";
+import mailboxTsx from "../../../../snippets/long-lists/mailbox.tsx?raw";
+
+New in 0.5.0: in infinite mode the table mounts only the rows in and near its viewport, however
+many pages are loaded. A mailbox scrolled through thousands of messages keeps a few dozen `<tr>`
+in the page, not thousands. The rows outside the window are stood in for by spacer rows of their
+height, so the scrollbar, the scroll position and the sticky header behave as if every row were
+there. Rows have one height (the view's `row_height`, default 40 px), so the window is arithmetic:
+no dependency, no measuring of each row.
+
+## When it applies
+
+Only in **infinite mode** (`pagination: infinite` in the view, or `pagingMode="infinite"`; pages
+mode is never windowed) and, by default, only once **more than 200 rows** are loaded: a list at or
+under that draws exactly the markup it drew before 0.5.0. The `virtualize` prop of `UdcDataView`
+(and of `TableRenderer`) changes that:
+
+| `virtualize`                       | Infinite mode windows its rows…                    |
+| ---------------------------------- | -------------------------------------------------- |
+| left out, or `{ enabled: "auto" }` | once more than `threshold` (200) rows are loaded   |
+| `true` / `{ enabled: true }`       | always, however few                                |
+| `false` / `{ enabled: false }`     | never: every loaded row is mounted, as before      |
+| `{ threshold: 500 }`               | once more than 500 are loaded                      |
+| `{ overscan: 20 }`                 | with 20 rows mounted beyond each edge (default 10) |
+
+## Worked example: a mailbox
+
+<Code code={mailboxTsx} lang="tsx" title="Mailbox.tsx" />
+
+With 5 000 messages loaded this mounts about 50 rows (the ones that show, 20 above and 20 below);
+scrolling moves the window, and reaching the end of the loaded rows loads the next page as before.
+
+## What keeps working across the window
+
+- **The table itself**: the sticky header, pinned columns and their shadows, column widths and
+  horizontal scroll; the spacers span every column.
+- **Loading more**: the infinite sentinel sits under the full height of the rows, so it comes into
+  view at the end of the loaded rows and asks for the next page.
+- **The keyboard** of [row activation](/concepts/views/#row-activation-and-the-keyboard):
+  ArrowDown / ArrowUp / `j` / `k` onto a row outside the window scroll it in, mount it and focus
+  it; Home and End go to the first and the last loaded row. The active and the focused row stay
+  mounted wherever they are.
+- **[Selection](/concepts/selection/)**: a shift-range and "select the page" are computed over the
+  loaded rows, never the mounted ones, so a range spanning rows that were never drawn selects them
+  all.
+- **An open cell editor** keeps its row mounted (scrolling neither commits nor cancels the edit),
+  and so does an open [row action](/concepts/row-actions/) menu.
+- **Lookups**: a lookup column still makes one fetch for every loaded row, not one per window.
+- **[Live updates](/concepts/live-updates/)**: a refetch keeps the scroll position.
+- **Screen readers**: `aria-rowcount` on the table is the loaded count and every mounted row
+  carries its `aria-rowindex`, so a screen reader hears "row 2 501 of 5 000".
+
+## Limits
+
+- The browser's find-in-page (Ctrl / Cmd+F) sees only the mounted rows; search the list with the
+  view's search box instead.
+- Printing prints the window, not the list.
+- Rows of variable height are not supported: a row taller than `row_height` is measured once and
+  its height used for all.
+- The cards, kanban and tree renderers are not windowed.
+
+**In a renderer of your own**, the arithmetic is in `@jsudc/react/headless`:
+`virtualizationApplies(virtualize, mode, count)`, `resolveVirtualization(virtualize)` (with
+`DEFAULT_VIRTUAL_THRESHOLD` and `DEFAULT_VIRTUAL_OVERSCAN`), `visibleRange`, `withOverscan`,
+`keepRange`, `bodySlices` and the hook `useRowWindow`. A windowed list of your own passes
+`reveal(row, index)` to `useRowActivation`, so the keys can bring in a row that is not mounted.
+`RendererProps.virtualize` carries the view's prop when the host set it.

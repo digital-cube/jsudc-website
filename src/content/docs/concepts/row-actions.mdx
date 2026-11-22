@@ -1,0 +1,100 @@
+---
+title: Row actions
+description: row_action_defs, row_actions and row_actions_display — the actions one row offers, as icon buttons or a menu, each only where its when holds. New in 0.5.0.
+sidebar:
+  order: 12
+---
+
+import { Code } from "@astrojs/starlight/components";
+import inboxTsx from "../../../../snippets/row-actions/inbox.tsx?raw";
+
+New in 0.5.0: each row offers the actions its view declares for one row, as icon buttons at the
+end of the row or in a "more" menu, each only where its `when` holds for that row. They run
+exactly as a [bulk action](/concepts/selection/#running-an-action) does on a selection of that
+one row: the same handlers, the same server paths. A view that declares none draws exactly what it
+drew before 0.5.0.
+
+## What a row offers: `row_action_defs`, `row_actions`, `when`
+
+The keys are udc's, read as udc-js reads them:
+
+- **`row_action_defs`**, a list of [`ActionDef`](/reference/view-yaml/#actiondef) (the shape of
+  `bulk_actions`), when the view has any;
+- else **`row_actions`**, the legacy list of kinds (`row_actions: [archive, delete]`), each lifted
+  to `{ kind }`.
+
+Each action is filtered by its **`when`** for that row: a boolean, or a filter node evaluated by
+`isActionEligible` of `@jsudc/core` against `row.__meta.state` when the source sends one, else
+against the row's own fields. A filter it cannot evaluate makes the action ineligible. A row none
+of whose actions apply shows nothing.
+
+## How they are drawn: `row_actions_display`
+
+- **`inline`** (the default, as in udc-js): the table gets a trailing column pinned at the end with
+  one icon button per action, labelled for screen readers and in a tooltip. An action whose `icon`
+  is not known draws its label as a small text button. The column is sized from every declared
+  action, with the `when`-gated ones counted as alternatives, so it does not jump as rows change.
+- **`menu`**: one "more" button per row opening a dropdown, and the same menu on right-click
+  anywhere on the row.
+
+The cards draw the same actions as a "more" menu on each card, whatever the display. Kanban, tree,
+calendar, map and chart draw no row actions.
+
+**The keyboard.** With [row activation](/concepts/views/#row-activation-and-the-keyboard) on, the
+focused row opens its menu from the context-menu key, Shift+F10 or `.`; in the inline display the
+keys open the same actions as a menu. Arrow keys move in the menu, Enter runs, Escape closes, and
+the focus goes back to the row.
+
+**A click on an action is the action's**: it neither activates the row (`onRowActivate`), nor
+follows its `row_link`, nor toggles its selection. A click anywhere else on the row does what it
+did.
+
+## Running one
+
+The path of [Running an action](/concepts/selection/#running-an-action), with `ids: [id]`:
+
+1. **A handler for its `kind`** (the view's `actions`, else `UdcProvider actions`) gets the bulk
+   context with `ids: [id]`, `rows: [row]` and `row`, the one row (absent when the bulk bar runs
+   it).
+2. **`delete`**: a confirmation ("Delete this row?"), then `mutate_many` `delete` when the source
+   has `capabilities.mutate_many`, else `mutate` `delete`.
+3. **A def with `set`**: an update with that patch, shown at once and put back if the call fails.
+4. **Anything else**: the server action the def's `action` names (default its `kind`) with
+   `{ collection, ids: [id] }`.
+
+An error, or the row named in a `failed` answer, is shown as a toast.
+
+## Worked example: mark read and archive
+
+A mailbox whose rows mark themselves read through a patch and archive through the host's own
+endpoint, each hidden where it does not apply:
+
+```yaml
+# collections/messages/view.yaml
+columns: [{ field: subject }, { field: from }, { field: received_at }]
+row_actions_display: inline # or `menu`
+row_action_defs:
+  - kind: mark_read
+    label: Mark read
+    icon: lucide:mail-open
+    set: { read: true } # no handler needed: an optimistic update
+    when: { field: read, op: eq, value: false }
+  - kind: archive
+    label: Archive
+    icon: lucide:archive
+    when: { field: folder, op: neq, value: archive }
+```
+
+<Code code={inboxTsx} lang="tsx" title="Inbox.tsx" />
+
+An unread message in the inbox shows both actions; a read one only "Archive"; a read one already
+archived, none. Clicking "Mark read" shows the row read at once (and so "Mark read" goes from it);
+clicking the row itself still opens the message.
+
+**In a renderer of your own**, `RendererProps.rowActions` (a `RowActions`) carries `display`,
+`defs`, `eligible(row)`, `label(def)`, `run(def, row)` and `runningOn(id)`; `RowActionsControls`
+with `useRowMenu()` draws the built-in buttons and menu. The headless parts (`rowActionDefs(view)`,
+`rowActionsDisplay(view)`, `eligibleRowActions(defs, row)`, `isRowMenuKey(e)`) are in
+`@jsudc/react/headless`.
+
+Every key: [view.yaml reference](/reference/view-yaml/).

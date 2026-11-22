@@ -1,11 +1,15 @@
 ---
 title: Sources
-description: Where a collection's rows come from — postgres_jsonb, memory, filesystem, http_api and yaml_menu — and what each can do.
+description: Where a collection's rows come from — postgres_jsonb, postgres_table, memory, filesystem, http_api and yaml_menu — and what each can do.
 sidebar:
   order: 2
 ---
 
+import { Code } from "@astrojs/starlight/components";
 import LiveExample from "../../../components/LiveExample.astro";
+import messagesTs from "../../../../snippets/postgres-table/messages.ts?raw";
+import onMutateTs from "../../../../snippets/postgres-table/on-mutate.ts?raw";
+import ownSourceTs from "../../../../snippets/postgres-table/own-source.ts?raw";
 
 A **source** is where a collection's rows live. `source.yaml` picks one with `kind`; without the
 file it is `postgres_jsonb`. Every source answers the same actions, so a client cannot tell a
@@ -14,6 +18,7 @@ table from an HTTP API, except by what the source says it can do.
 | `kind`                     | Rows                                                                                     | Writes                                      |
 | -------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------- |
 | `postgres_jsonb` (default) | a table, every field in one `data jsonb` column; `options.table` overrides the name      | mutate, schema edits, reindex, reparent     |
+| `postgres_table`           | an ordinary relational table with typed columns, or a `FROM` with joins                   | mutate (plain columns)                      |
 | `memory`                   | `seed.json`, kept in the process                                                         | mutate, reindex, reparent (lost on restart) |
 | `filesystem`               | the entries of one directory under `options.root`                                        | read-only                                   |
 | `http_api`                 | one upstream call mapped into rows, cached for `cache_ttl_ms`                             | read-only                                   |
@@ -27,6 +32,17 @@ it supports. The data view reads it: a read-only source gets no inline edit and 
 an array-backed source pages by offset. Every key:
 [Capabilities](/reference/envelope/#capabilities).
 
+New in 0.5.0:
+
+- **`mutate_many`**: the collection changes or deletes many rows in one request. Every collection
+  that serves `mutate` serves it, in one transaction in both Postgres sources; see
+  [Selection and bulk actions](/concepts/selection/#mutate_many-on-the-wire).
+- **`search: "source"`**: the source answers the search box's text itself, from a `tsvector`
+  (`postgres_table`'s `search` option) or an external index (`withSearchIndex`); see
+  [Search answered by the source](/concepts/search/).
+- **`changes`**: the server pushes the collection's changes over the change feed; see
+  [Live updates](/concepts/live-updates/).
+
 ## postgres_jsonb
 
 One table per collection, every field inside a `data jsonb` column next to `id`, `version` and
@@ -35,6 +51,160 @@ after `9`); the fields marked `index: true` get expression indexes. The schema i
 numbered revisions in `udc_schema_revisions`, so it can change at runtime (see
 [Schema revisions](/concepts/schema-revisions/)). The host runs the library's SQL once
 (`ensureUdcSchema(db)` or the shipped migrations) and owns its collection tables.
+
+## postgres_table
+
+New in 0.4.0: a collection served from a table you already have, with typed columns, or from a
+`FROM` with joins. Filters (all fourteen operators), sort, the keyset cursor and offset paging
+behave as on `postgres_jsonb`, because it is the same compiler resolving each field to a column
+instead of `data->>'field'`. Number, date, datetime and bool columns compare as their own type;
+text compares and sorts by code point (`COLLATE "C"`), so the answers agree with the filter
+evaluator in the browser. The schema is the collection's `schema.json`: no revisions, no schema
+edits, no reindex, no tree reparent. A NULL column is left out of the row, as a field missing from
+`data` is (`keepNulls: true` serves `null`).
+
+From `source.yaml` a collection names only identifiers (lowercase snake_case): the table, the id
+and version columns, the field → column map and `total_count`.
+
+```yaml
+kind: postgres_table
+options:
+  table: message # default: the collection name
+  id_column: id # default: id
+  id_type: uuid # uuid (default) | text | integer — the cursor and read follow it
+  version_column: row_version # __meta.version; without it every row is version 1
+  columns:
+    subject: subject_line # a field without an entry reads the column of its own name
+  total_count: false # no count(*) next to the page; total is null
+```
+
+Every key: [`PostgresTableOptions`](/reference/source-yaml/#postgrestableoptions).
+
+### In code: joins, computed fields, writing
+
+SQL (a `FROM` with joins, a field as an expression, a base `where`) is given only in code, by
+registering a `PostgresTableSource` yourself; it is the host's SQL, never taken from a request.
+The worked example: a `message` table with typed columns and UUID ids, an `attachment` link table,
+and the attachment count as a computed field.
+
+```sql
+CREATE TABLE message (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant text NOT NULL,
+  subject text NOT NULL,
+  received_at timestamptz NOT NULL,
+  unread boolean NOT NULL DEFAULT true,
+  labels text[],
+  row_version integer NOT NULL DEFAULT 1,
+  deleted_at timestamptz
+);
+CREATE TABLE attachment (id serial PRIMARY KEY, message_id uuid REFERENCES message, name text);
+```
+
+<Code code={messagesTs} lang="ts" title="messages.ts" />
+
+- **The field map.** `fields` maps each field to a column, or to `{ column | sql, readOnly?,
+  filterable?, sortable?, array? }`. A field without an entry reads the column of its own name;
+  every field of the schema must resolve.
+- **Computed fields.** `attachment_count` (`sql`) lists, sorts and filters (`gte 1`) like a column,
+  because it has one value per row. An aggregate over a grouped `FROM` would not be valid in a
+  `WHERE`: mark such a field `{ sql: …, filterable: false, sortable: false }`. A field with
+  `filterable: false` is refused in a filter exactly like an unknown field and left out of
+  `describe.filterable`; `sortable: false` refuses it in a sort.
+- **Read-only fields.** A computed field, a column marked `readOnly: true` (a creation time, a
+  column a trigger keeps) and, under a `from`, a column of any table other than `writeTable` are
+  never written. An insert or patch that names one is a `validation_error` whose
+  `details.problems` names it, next to any other problem.
+- **The version column.** With `versionColumn` an insert writes `1`, every update increments it,
+  and `expected_version` is checked inside the transaction with the row locked: of two concurrent
+  edits of one version exactly one wins, the other gets `version_conflict` with
+  `details.current_version`. **Without one** every row is version `1` and `expected_version` is
+  accepted and not checked: no optimistic locking, the last write wins.
+- **`total_count: false`** (`totalCount: false` in code): no `count(*)` next to the page, `total`
+  is `null` and `capabilities.total_count` is `false`. For a table too large to count on every
+  page.
+- **Writing.** `mutate` inserts, updates (a partial patch) and deletes rows of `table`, so
+  `capabilities.mutate` is `true`. A `from` with joins writes only when it names `writeTable` (and
+  `writeAlias`, its alias in the `from`); without it, and with `readOnly: true`, `mutate` answers
+  `unsupported_op`. Every write is one transaction: lock the row, check the version, write, read
+  the row back through the `from` (so the answer carries the computed fields as they are now),
+  run `onMutate`. A constraint the database refuses rolls it back and is answered `internal`.
+- **The row scope** of a request ([Request context and scope](/concepts/request-context/)) is
+  compiled into the `WHERE` of `list`, `read`, update and delete (outside → `not_found`); an insert
+  gets the scope's `eq` values written over what the client sent; a written row that falls outside
+  the scope or the base `where` is `forbidden` (`reason: "out_of_scope"`) and rolled back.
+- **`search`** (new in 0.5.0): `match(q)` and an optional `rank(q)`, SQL written in code over a
+  `tsvector`; the collection then answers the search box itself and orders a search by relevance.
+  See [Search answered by the source](/concepts/search/#on-postgres_table-a-tsvector).
+
+### `onMutate`: a host's own write
+
+Both Postgres sources, `PostgresTableSource` and `PostgresJsonbSource`, take
+`onMutate(ctx, change, tx)`: a write of the host's own that goes with every mutation, such as a
+flag that must also reach an external system.
+
+- **`ctx`** is the [request context](/concepts/request-context/), `undefined` without one.
+- **`change`** (`RowChange`) is `{ op, collection, id, before, after, patch }`: `before` the row as
+  it was (`null` on insert), `after` the row as written (`null` on delete), `patch` what the
+  request wrote (`null` on delete).
+- **`tx`** is an executor on the source's own transaction: the host's SQL on it commits with the
+  row and rolls back with it.
+- It returns nothing, or a row: a returned row is what the caller receives (the source does not
+  write it). A row without `__meta` keeps the written row's id and version.
+
+**When it runs:** inside the transaction, **after** the source's own statement and **before**
+`COMMIT`, with the row locked. A database refusal (a constraint, a version conflict, a row outside
+the scope, a validation problem) is known before the hook is called, and no other connection sees
+the change until `COMMIT`.
+
+**When it fails:** the transaction is rolled back and nothing is written, the row nor the hook's
+own SQL. A `UdcError` the hook throws is answered to the caller as it is; anything else is
+answered `internal` with the generic message and logged. The caller never gets a row the host's
+write did not accept.
+
+The worked example: a `seen` column that must also be set on the IMAP server.
+
+<Code code={onMutateTs} lang="ts" title="message.ts" />
+
+| The mail server                | The answer to `mutate {op: "update", id, row: {seen: true}}`                                         | The row                    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------- | -------------------------- |
+| sets the flag                  | `udc.mutate.ok`, the row with `seen: true` and the next version                                      | committed                  |
+| refuses, or times out          | `udc.mutate.err`, `forbidden`, "the mail server did not accept the change, try again", `reason: imap` | unchanged, nothing written |
+| the hook throws something else | `udc.mutate.err`, `internal` (the error in the server's log)                                         | unchanged, nothing written |
+| (the row moved on meanwhile)   | `version_conflict` before the hook runs: the mail server is not called                               | unchanged                  |
+
+Two things to keep in mind. The hook holds a transaction and a row lock for as long as it runs,
+so bound the external call (a timeout well under the client's). And when the hook succeeded but
+`COMMIT` then fails, the external write stands and the row does not: make the hook idempotent
+(set a flag, never toggle it), so a retry converges.
+
+Without the option nothing changes: `postgres_jsonb` issues exactly the statements of 0.3.0, with
+no transaction added; with it, each of its mutations runs in one.
+
+### A source of your own over SQL
+
+The compiler behind both Postgres sources is exported from `@jsudc/server`, so a host that writes
+a source of its own over SQL does not re-implement the filter DSL. A `FieldResolver` says where
+each allowlisted field lives; the compiler does the rest: the allowlist, typed parameters,
+three-valued logic, NULLS LAST, the keyset predicate.
+
+<Code code={ownSourceTs} lang="ts" title="people-source.ts" />
+
+| Export                                                                | What                                                                                       |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `compileFilter(node, schema, resolve?)`                               | a filter tree as a `WHERE` expression; unknown fields and wrong values refused             |
+| `compileSort(sort, schema, resolve?)`                                 | the sort keys as `SortTerm`s                                                               |
+| `orderBy(terms, resolve?)`                                            | `ORDER BY` the keys, NULLS LAST, then the row id ascending                                 |
+| `sortKeyColumns(terms)`                                               | the sort values as text (`__k0`, `__k1`, …), selected to build the next cursor             |
+| `cursorPredicate(terms, values, id, resolve?)`                        | the rows strictly after a cursor position                                                  |
+| `encodeCursor(parts)`, `decodeCursor(c, keys, idType?)`               | the cursor codec; the id is checked against `idType`                                       |
+| `escapeLike(text)`                                                    | a LIKE pattern that matches literally                                                      |
+| `jsonbResolver`                                                       | `postgres_jsonb`'s resolver, the default of every `resolve?`                               |
+| `columnResolver({ fields, id, idType, arrayForms })`                  | the resolver over typed columns that `PostgresTableSource` uses                            |
+
+Such a source receives the request's row scope in its `SourceContext`; compiling `sctx.rowScope`
+with the same `compileFilter` and setting `enforcesRowScope = true` puts the scope in its own
+`WHERE` (see [Request context and scope](/concepts/request-context/#a-source-that-knows-the-scope)).
 
 ## memory
 

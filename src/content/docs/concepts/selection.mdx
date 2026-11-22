@@ -1,0 +1,168 @@
+---
+title: Selection and bulk actions
+description: multiselect and bulk_actions in view.yaml — select rows, a page or everything that matches, and run an action on them with one mutate_many. New in 0.5.0.
+sidebar:
+  order: 11
+---
+
+import { Code } from "@astrojs/starlight/components";
+import inboxTsx from "../../../../snippets/selection/inbox.tsx?raw";
+import limitTs from "../../../../snippets/selection/limit.ts?raw";
+import mutateManyTs from "../../../../snippets/selection/mutate-many.ts?raw";
+
+New in 0.5.0: a user selects rows (one, a range, the page, or everything that matches the filter)
+and runs the view's `bulk_actions` on them. On the wire the action is one request,
+[`mutate_many`](#mutate_many-on-the-wire), however many rows it touches.
+
+## Turning it on
+
+Selection is on when the view says `multiselect: true` or declares `bulk_actions`. The
+`selectable` prop of `UdcDataView` forces it on (`true`) or off (`false`) whatever the view says.
+A view with neither draws exactly what it drew before 0.5.0.
+
+A mailbox that archives through the host's own endpoint, marks read with a patch, and deletes with
+the built-in delete:
+
+```yaml
+# collections/messages/view.yaml
+columns: [{ field: subject }, { field: from }, { field: received_at }]
+bulk_actions:
+  - kind: archive
+    label: Archive
+    icon: lucide:archive
+  - kind: mark_read
+    label: Mark read
+    icon: lucide:mail-open
+    set: { read: true }
+    when: { field: read, op: eq, value: false }
+  - kind: delete
+    variant: destructive
+```
+
+Each entry is an [`ActionDef`](/reference/view-yaml/#actiondef): `kind`, `label`, `icon`
+(`lucide:<name>`), `variant`, `when`, and 0.5.0's `set`, `action` and `confirm`.
+
+## What a user can select
+
+- **The table** gets a checkbox column pinned at the start and a header checkbox for the page
+  (checked, empty or indeterminate). Shift-click selects the range from the last row toggled. With
+  [row activation](/concepts/views/#row-activation-and-the-keyboard) on, Space toggles the active
+  row and Shift+Space selects a range to it.
+- **The cards** get a checkbox each.
+- Kanban, tree, calendar, map and chart do not select.
+
+While anything is selected a bar over the list shows the count, a button per `bulk_actions` entry
+and a clear button.
+
+**The selection is cleared** when the filter changes (the search, a chip, the filter builder, the
+host's `filter`) or the collection does. A sort, a refetch and more pages loading keep it: the
+selected rows are remembered by id, so a row a refetch drops still counts and still reaches a
+handler.
+
+## All that match
+
+When the whole page is selected and more rows match than are loaded, the bar offers
+"Select all 1,234 that match". Taking it switches the selection to "every row the filter matches,
+except the ones you uncheck" (the bar reads "All 1,234 are selected"), and an action then goes to
+the server **by filter**, not by ids. When everything is loaded already the page is everything,
+and nothing is offered.
+
+**Without a total.** A source answering `capabilities.total_count: false` lists with
+`total: null`. The offer then reads "Select all that match" and the bar "All matching rows are
+selected", with no number, and the result message reports the count the server answers
+(`updated`).
+
+**Under a source search** "all that match" is not offered: `mutate_many` by filter cannot carry
+the search text, so it could not name the same rows. The bar says "Only the loaded rows can be
+selected while searching"; see [Search answered by the source](/concepts/search/).
+
+## Running an action
+
+An action's button is disabled unless its `when` holds for every selected row
+(`isActionEligibleForAll` of `@jsudc/core`). In "all that match" mode rows that are not loaded
+cannot be checked in the browser, so the action is offered unless `when` is `false`, and the
+server decides.
+
+A click runs the first of these that applies:
+
+1. **A handler for its `kind`**: the view's `actions` prop, else `UdcProvider actions`. It gets
+   `{ kind, def, collection, ids }` in id mode or `{ kind, def, collection, filter, exceptIds }` in
+   "all that match" mode, with `rows` (the selected rows that are loaded) and `clearSelection`.
+   The view does not clear the selection after a handler: call `clearSelection` when you are done.
+   A handler that throws shows its message.
+2. **`delete`**: a confirmation, then `mutate_many` `delete`.
+3. **A def with `set`**: `mutate_many` `update` with that patch.
+4. **Anything else**: the server action the def's `action` names (default its `kind`) with
+   `{ collection, ids }` or `{ collection, filter, except_ids }`, that is a
+   [host action](/concepts/host-actions/) registered on the dispatcher. An `unsupported_op`
+   answer shows "The server does not support …", naming the action.
+
+The built-in paths (2–4) ask first when `actionConfirms(def)` says so: `delete` by default, any
+other def with `confirm: true` or a question of its own. They change the loaded rows at once, put
+them back if the call fails, refetch the collection's lists and lookups when it settles, and
+report what the server answers: "12 rows deleted", "Mark read: 12 rows", and "3 rows could not be
+changed" for the ids in `failed`, which stay selected.
+
+The mailbox above, with a handler for `archive` (the other two need none):
+
+<Code code={inboxTsx} lang="tsx" title="Inbox.tsx" />
+
+A button's text is the term `ACTION_<KIND>` of the collection's section (`TBL_<COLLECTION>`), else
+`ACTIONS.<kind>`, else the def's `label`.
+
+**Accessibility.** With selection on and row activation off the table stays a table: each row's
+checkbox is a native checkbox labelled "Select row", the header's "Select all rows shown"
+(`aria-checked="mixed"` when some are). With both on the list is ARIA's multi-select grid
+(`aria-multiselectable="true"`): `aria-selected` says whether a row is selected, and the active row
+is marked `aria-current="true"` and `data-active="true"`. A selected row carries
+`data-selected="true"` (`.udc-row[data-selected]`, `.udc-card[data-selected]`); the bar is
+`role="toolbar"` and its count is announced politely.
+
+**In a renderer of your own**, `RendererProps.selection` (a `RowSelection`) carries `mode`, `ids`,
+`exceptIds`, `count`, `rows`, `isSelected(id)`, `toggle(id, { range })`, `setPage(on)`,
+`selectAllMatching()` and `clear()`; the view draws the bar. `useRowSelection` of
+`@jsudc/react/headless` is the same model for a list of your own. `useUdcMutateMany(collection)` is
+`useUdcMutate` for many rows: optimistic in every cached list, put back on an error, resolving to
+the server's `{ updated, failed }`.
+
+## `mutate_many` on the wire
+
+`mutate_many` changes (`update`, with the patch `row`) or deletes many rows in one request:
+
+```json
+{ "collection": "message", "op": "update", "filter": { "field": "folder", "op": "eq", "value": "inbox" },
+  "except_ids": ["m7", "m9"], "row": { "archived": true } }
+```
+
+It names the rows **either** by `ids` **or** by `filter` (everything that matches, minus
+`except_ids`), never both; `{ "and": [] }` is the filter that matches every row. There is no
+`expected_version`: the server bumps the version of every row it changes. It answers
+`{ updated, failed: [{ id, code, message? }] }`. A collection that serves it says
+`capabilities.mutate_many: true`; without it a client loops over `mutate`.
+
+<Code code={mutateManyTs} lang="ts" title="mutate-many.ts" />
+
+**Scope.** The request runs under the same [request context and row
+scope](/concepts/request-context/) as `mutate`. By ids, the rows that exist inside the caller's
+scope are changed, and every other id is reported in `failed` as `not_found`: a missing row and
+another tenant's row are indistinguishable. By filter, the client's filter is ANDed with the scope.
+A patch that would take a row out of the scope is refused (`forbidden`,
+`reason: "out_of_scope"`) and nothing is written.
+
+**One transaction** in both Postgres sources. The target rows are locked in id order and written
+together; with [`onMutate`](/concepts/sources/#onmutate-a-hosts-own-write) they are written row
+by row inside the same transaction, and a hook failure rolls the whole request back. All or
+nothing: `failed` only ever lists ids that were not there. A source without a native `mutateMany`
+(`memory`, a source of your own) gets a generic one that checks everything before the first write,
+but has no transaction.
+
+**The cap.** One request may touch at most 10 000 rows (`DEFAULT_MUTATE_MANY_LIMIT`; also the most
+`ids` a request may carry, `MUTATE_MANY_MAX_IDS`). More ids, or a filter matching more inside the
+scope, is a `validation_error` with `details: { reason: "too_many_rows", limit, by }` before
+anything is written. The sources count with a bounded query, so the check works on a collection
+with `total_count: false`. A host lowers it on the dispatcher:
+
+<Code code={limitTs} lang="ts" title="server.ts" />
+
+Every key: [`mutate_many`](/reference/actions/mutate_many/),
+[ActionDef](/reference/view-yaml/#actiondef).

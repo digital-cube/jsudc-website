@@ -536,6 +536,9 @@ PAGES.push({
     "RowSchema",
     "RowMetaSchema",
     "CapabilitiesSchema",
+    // the change feed (GET /udc/changes): one Server-Sent Event per change, and the stream's first event
+    "ChangeEventSchema",
+    "ChangesReadySchema",
   ],
   intro: (page) => {
     const rows = core.ACTION_NAMES.map((a) => [

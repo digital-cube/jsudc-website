@@ -1,0 +1,159 @@
+---
+title: Live updates
+description: The change feed — the server tells every client that may see a changed row, over one Server-Sent Events stream, and the views refetch; notify, the scope rule, a bus across processes, polling as the fallback. New in 0.5.0.
+sidebar:
+  order: 14
+---
+
+import { Code } from "@astrojs/starlight/components";
+import appTsx from "../../../../snippets/live-updates/app.tsx?raw";
+import busTs from "../../../../snippets/live-updates/bus.ts?raw";
+import scriptTs from "../../../../snippets/live-updates/script.ts?raw";
+import serverTs from "../../../../snippets/live-updates/server.ts?raw";
+
+Before 0.5.0 a view refreshed on a timer, its `refresh_interval_ms`, or not at all. New in 0.5.0:
+the **change feed**. The host tells jsudc when rows changed, and every connected client that may
+see those rows is told over one long-lived stream, so what is on screen refreshes without polling.
+
+An event never carries row data: it is `{ collection, op, ids? }`
+([ChangeEvent](/reference/envelope/#changeevent)), and the client refetches under its own scope.
+A field the caller may not see can never travel through the feed.
+
+## On the server
+
+Create a feed once and give it to the dispatcher as `changes`. Every collection then reports
+`capabilities.changes: true`, and the plugin serves `GET /udc/changes?collections=a,b` as
+Server-Sent Events. Without `changes` nothing differs from before: no route, no capability, no
+cost.
+
+<Code code={serverTs} lang="ts" title="server.ts" />
+
+The stream runs the plugin's `context` once when it opens: a refusal is an HTTP 401
+(unauthenticated) or 403, not a stream. Every collection asked for must be one the request may
+`list`, else 404. The stream then sends a `retry:` hint, a `ready` event, one `change` event per
+change the request may see, and a heartbeat every 15 s. There is **no replay**: a change made while
+a client was disconnected is not sent later; the client refetches when it reconnects.
+
+### What jsudc notifies by itself
+
+After its own writes commit, once per request, never for a request that failed:
+
+| Action          | Event                                                                                     |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| `mutate`        | `insert` / `update` / `delete` with the row's id                                          |
+| `mutate_many`   | `update` / `delete` with the ids of the rows it changed                                   |
+| `reindex`       | `update` without ids                                                                      |
+| `tree.reparent` | `update` without ids (the subtree and both parents changed too)                           |
+
+### `notify`: changes jsudc did not make
+
+A write of your own (a background sync, another service, a SQL job) is told with
+`changes.notify(collection, { op?, ids?, ctx?, rows? })`, as `syncMailbox` above does:
+
+- **`ctx`**: the request context the rows belong to. Your `rowScope(ctx, collection)` says which
+  streams that is.
+- **`rows`**: the changed rows' values instead (any fields a scope tests; a `__meta.id` names the
+  row). Each scope is told only the ids of its own rows. Preferred over `ctx` when both are given.
+- **`op`** defaults to `update`; no `ids` means "this collection changed".
+
+On a collection that has a row scope, a `notify` with neither `ctx` nor `rows` **throws**: nothing
+is ever broadcast across scopes.
+
+## Who is told: the scope rule, in plain words
+
+A stream is told about a change in a collection when it asked for that collection **and** either
+it has no row scope there, or its scope holds for at least one of the changed rows. It then
+receives only the ids of the rows its scope holds for.
+
+So a user whose [row scope](/concepts/request-context/) is "my own messages" hears about their own
+messages and nobody else's; a tenant hears only its tenant. To test that, a change carries, on the
+server only, the values of the changed rows that a scope can test (short strings, numbers,
+booleans, null); row contents beyond that are never kept. A change whose rows are unknown reaches
+unscoped streams only.
+
+**Bursts.** Past 20 events for one collection on one stream within 250 ms, the rest are sent as
+one event without ids at the end of the window (`coalesce`), and an event naming more than 500 rows
+is sent without ids (`maxIds`).
+
+## Several processes: the bus
+
+The default bus is in-process, right for one server process. With several behind a load balancer,
+a change made through one must reach the streams of the others, so give every process the same
+bus. jsudc ships one over Postgres `LISTEN` / `NOTIFY`; anything else (Redis pub/sub, NATS) is a
+`ChangeBus` of your own:
+
+<Code code={busTs} lang="ts" title="bus.ts" />
+
+The Postgres bus keeps one dedicated connection per process and reopens it with backoff when it
+drops; notices sent while it is down are lost to that process (its clients refetch on reconnect).
+A payload over NOTIFY's 8000-byte limit goes out without ids. A `ChangeNotice` carries the values
+the scope rule tests, so keep the channel server-side.
+
+## In React: the provider switch
+
+Pass `changes` to `UdcProvider` and the views refetch when the server says their rows changed.
+`useUdcChanges(collection, onEvent?)` hears the same events in a component of your own and answers
+`{ status, live }`:
+
+<Code code={appTsx} lang="tsx" title="App.tsx" />
+
+- **One stream per provider.** A collection joins the stream when the first view or hook that
+  shows it mounts (the data view, `useUdcCollection`, `useUdcAllRows`, the lookups into it,
+  `useUdcChanges`) and leaves it when the last one unmounts. A new list of collections opens a new
+  stream; the old one closes only once the new one is subscribed, so nothing is missed.
+- **On an event** the collection's lists, the lookup labels into it and its picker options are
+  invalidated, so what is on screen refetches, debounced (200 ms) and held back while a mutation of
+  yours is in flight. A `delete` that names its `ids` takes those rows out of the cached lists at
+  once; nothing else is applied without the server's answer.
+- **On reconnect** everything the stream carries is refetched: changes made meanwhile were not
+  sent.
+- **What stays put** across such a refetch: the active row and the focus, the selection, an open
+  cell editor and what was typed in it, the scroll position of an infinite list.
+- **The indicator.** Beside the freshness pill the data view shows "live" while the stream carries
+  its collection and "reconnecting" while it is being reopened; `liveIndicator={false}` hides it,
+  and `LiveIndicator` draws it in a toolbar of your own.
+
+`changes` also takes options (`debounceMs`, `batchMs`, `removeDeleted`, and the reconnect delays).
+`changes={false}` on an inner provider turns it off below.
+
+## Polling is the fallback
+
+While the stream carries a collection, its `refresh_interval_ms` timer is suspended. The timer runs
+again while the stream reconnects, when the server refused it, and always without a feed. A
+provider without `changes` opens no connection, and a collection whose `describe` does not say
+`capabilities.changes: true` is never subscribed: every view polls exactly as before.
+
+## Without React
+
+`UdcClient.changes` reads the stream with `fetch` (not `EventSource`, which cannot send headers),
+so the client's [headers and credentials](/concepts/sessions/) apply as to every call. It
+reconnects with backoff and jitter, reports `reconnected` so you can refetch, and stops on abort
+or a refusal (401, 403, 404, 400):
+
+<Code code={scriptTs} lang="ts" title="script.ts" />
+
+## What a proxy must allow
+
+The stream is one response that never ends. In front of it:
+
+- **No buffering.** nginx: `proxy_buffering off;` (the route also sends `X-Accel-Buffering: no`),
+  and no gzip on `text/event-stream`.
+- **Long timeouts.** The heartbeat writes every 15 s; a read timeout above that keeps the
+  connection open (nginx `proxy_read_timeout 1h;`, an AWS ALB idle timeout above 15 s). HTTP/1.1
+  to the upstream.
+- **Connections per origin.** Browsers allow about six HTTP/1.1 connections per origin: one stream
+  carries every collection a page shows, or serve over HTTP/2.
+
+```nginx
+location /udc/changes {
+  proxy_pass http://app;
+  proxy_http_version 1.1;
+  proxy_set_header Connection "";
+  proxy_buffering off;
+  proxy_read_timeout 1h;
+  gzip off;
+}
+```
+
+Every key: [Capabilities](/reference/envelope/#capabilities),
+[ChangeEvent](/reference/envelope/#changeevent).

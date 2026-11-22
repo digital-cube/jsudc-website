@@ -12,9 +12,33 @@ together: a client and a server speak the same protocol when their minor version
 
 <PackageTable />
 
-0.3.0 adds [lookups and drill-down](/concepts/lookups/) to all three: `lookup` / `lookup_array`
+0.5.0 is what a mailbox-sized UI needs. `@jsudc/core` adds the `mutate_many` action, host
+actions typed end to end (`defineHostAction`), action eligibility and the `set` / `action` /
+`confirm` keys of an `ActionDef`, `ListRequest.search` with the `search` capability, and the change
+feed on the wire (`ChangeEvent`, `UdcClient.changes`). `@jsudc/server` serves
+[`mutate_many`](/concepts/selection/#mutate_many-on-the-wire) in one transaction under the row
+scope, registers [host actions](/concepts/host-actions/) with the request context, lets a source
+[answer the search](/concepts/search/) (`postgres_table`'s `search`, `withSearchIndex`) and pushes
+[live updates](/concepts/live-updates/) (`createChangeFeed`, `notify`, the Postgres bus).
+`@jsudc/react` adds [selection and bulk actions](/concepts/selection/),
+[row actions](/concepts/row-actions/), `useUdcAction`, the live provider switch with
+`useUdcChanges`, and [long lists](/concepts/long-lists/) windowed in the table's infinite mode.
+Every addition is optional: a 0.4.0 view, source and host work unchanged. Both `@jsudc/server` and
+`@jsudc/react` 0.5.0 need `@jsudc/core` 0.5.0.
+
+0.4.0 made jsudc what a multi-tenant host needs. `@jsudc/core` adds "not signed in" to the protocol
+(`forbidden`, `reason: "unauthenticated"`), a client for cookie sessions and CSRF, and the
+`postgres_table` source kind. `@jsudc/server` adds the
+[request context and row scope](/concepts/request-context/), the
+[`postgres_table` source](/concepts/sources/#postgres_table) with writes and `onMutate`, and the
+exported SQL compiler. `@jsudc/react` adds [sessions](/concepts/sessions/),
+[embedding a view](/concepts/embedding/) with a scoped stylesheet, and
+[row activation and custom cells](/concepts/views/#row-activation-and-the-keyboard). Both
+`@jsudc/server` and `@jsudc/react` 0.4.0 need `@jsudc/core` 0.4.0.
+
+0.3.0 added [lookups and drill-down](/concepts/lookups/) to all three: `lookup` / `lookup_array`
 fields and `row_link` in `@jsudc/core`, their filters and start-up checks in `@jsudc/server`, and
-labels, chips, the combobox and `useUdcLookup` in `@jsudc/react`. A 0.3 client needs a 0.3 server.
+labels, chips, the combobox and `useUdcLookup` in `@jsudc/react`.
 
 ## Which ones you install
 

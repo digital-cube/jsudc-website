@@ -2,7 +2,7 @@
 title: Theming
 description: Three layers so any design system works — headless hooks, a swappable UI kit, and CSS variables with stable udc-* classes.
 sidebar:
-  order: 8
+  order: 17
 ---
 
 import LiveExample from "../../../components/LiveExample.astro";
@@ -30,6 +30,13 @@ html[data-brand="acme"] {
   --sem-accent: oklch(0.53 0.16 40);
 }
 ```
+
+:::tip[A view inside your own pages]
+`styles.css` resets the whole page and puts its tokens on `:root`. A host that embeds a view in
+pages of its own imports `@jsudc/react/styles.scoped.css` instead: the same utilities and tokens,
+applied only inside `.udc-data-view` and `.udc-scope`, restyled on those roots rather than on
+`:root`. See [the scoped stylesheet](/concepts/embedding/#the-scoped-stylesheet).
+:::
 
 The library's utilities are compiled with the `udc:` prefix, so they cannot collide with a host's
 Tailwind. For what a variable cannot reach, every structural element carries a stable class:
